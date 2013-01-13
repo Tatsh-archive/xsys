@@ -23,6 +23,9 @@ linux_PCI_CLASS_NETWORK_ETHERNET = 0x0200
 linux_PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
 linux_PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
 
+# TODO Setting by /percentages command
+percentages = False
+
 
 def parse_pci_path_ids(path):
     device_file = os.path.join(path, 'device')
@@ -177,37 +180,62 @@ def meminfo(word, word_eol, userdata):
 
 
 def sysinfo_diskinfo():
-    lines = sp.check_output(
-        'df -T | grep -E "^/dev/(s|h|x)(d|vd)"', shell=True).split('\n')
-    total_free_space = 0
-    total_blocks = 0  # 1 KiB blocks
+    def pretty_freespace(desc, free_k, total_k):
+        def percentage(free, total):
+            result = free * 1000 / total
+            return result / 10.0
+
+        i = -1
+        bytesize = 'B'
+        quantities = ['KiB', 'MiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+        result = ''
+        free_space = free_k
+        total_space = total_k
+
+        if total_k == 0:
+            return '%s: none' % desc
+
+        while total_space > 1023 and i < 7:
+            i += 1
+            bytesize = quantities[i]
+            free_space /= 1024
+            total_space /= 1024
+
+        if percentages:
+            result = '%s: %.1f %s, %.1f%% free' % (
+                desc,
+                total_space,
+                bytesize,
+                percentage(free_k, total_k))
+        else:
+            result = '%s: %.1f %s/%.1f %s free' % (
+                desc,
+                free_space,
+                bytesize,
+                total_space,
+                bytesize)
+
+        return result
+
+    lines = sp.check_output('df -k -l -P', shell=True).split('\n')
+    total_k = 0
+    free_k = 0
 
     for line in lines:
         try:
-            parts = filter(remove_empty_strings, line.split(' '))
-            free_space = long(parts[4])
+            if line.find('/dev/loop') != -1 or line.find('/dev/root') != -1:
+                continue
 
-            total_free_space += free_space
-            total_blocks += long(parts[3])
-        except IndexError:
-            pass
+            if line[0].isalpha():
+                continue
+        except:
+            continue
 
-    total_gigabytes = total_blocks / 1024 / 1024
-    total_terabytes = total_gigabytes / 1024
-    unit = 'GiB'
+        parts = filter(remove_empty_strings, line.split(' '))
+        total_k += long(parts[1])
+        free_k += long(parts[2])
 
-    total_free_gigabytes = total_free_space / 1024 / 1024
-    total_free_terabytes = total_free_gigabytes / 1024 / 1024
-
-    total = total_gigabytes
-    free = total_free_gigabytes
-
-    # if total_terabytes > 1:
-        # unit = 'TiB'
-        # total = total_terabytes
-        # free = total_free_terabytes
-
-    return 'Total: %.1f %s/%.1f %s free' % (free, unit, total, unit)
+    return pretty_freespace('Total', free_k, total_k)
 
 
 def diskinfo(word, word_eol, userdata):
