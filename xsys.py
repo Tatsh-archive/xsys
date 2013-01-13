@@ -330,7 +330,7 @@ def netstream(word, word_eol, userdata):
   except:
     print sys.exc_info()
     print('Error calling parse_netdev()')
-    return
+    return xchat.EAT_ALL
 
   # Original in C
   # struct timespec ts = {1, 0};
@@ -342,7 +342,7 @@ def netstream(word, word_eol, userdata):
   except:
     print sys.exc_info()
     print('Error calling parse_netdev()')
-    return
+    return xchat.EAT_ALL
 
   bytes_recv = bytes_recv_p - bytes_recv
   bytes_sent = bytes_sent_p - bytes_sent
@@ -360,7 +360,7 @@ def netstream(word, word_eol, userdata):
 
   dest.command('say %s' % wrap('netstream', output))
 
-  return
+  return xchat.EAT_ALL
 
 #xchat.hook_command('sysinfo', sysinfo)
 #xchat.hook_command('xsys2format', xsys2format)
