@@ -224,7 +224,7 @@ def ether(word, word_eol, userdata):
 
   if output:
     dest = xchat.get_context()
-    dest.command('say %s' % wrap('ethernet', output))
+    dest.command('say %s' % wrap('ether', output))
 
   return xchat.EAT_ALL
 
