@@ -387,6 +387,96 @@ def osinfo():
 
   return
 
+def parse_distro():
+  def strpbrk(haystack, char_list):
+    try:
+      pos = next(i for i,x in enumerate(haystack) if x in char_list)
+      return haystack[pos:]
+    except:
+      return None
+
+  def find_match_char(search, match):
+    search = search.lstrip()
+    delimiters = [':', '=']
+    result = None
+
+    if search.find(match) == search.find(search):
+      position = strpbrk(search, delimiters)
+
+      if position != None:
+        position += 1
+        result = (search[position:] + '\n').lstrip()
+
+    return result
+
+  def parse_gentoo(make_conf_file):
+    keywords = None
+
+    for line in make_conf_file:
+      keywords = line.find('ACCEPT_KEYWORDS')
+
+    if keywords == -1:
+      return 'Gentoo Linux (stable)'
+
+    keywords = keywords.split('ACCEPT_KEYWORDS=')[1].replace('"', '')
+
+    return 'Gentoo Linux %s' % keywords
+
+  def parse_lsb_release_file(f):
+      distro_id = None
+      codename = None
+      release = None
+      for line in f:
+        if distro_id == None:
+          distro_id = find_match_char(line, 'DISTRIB_ID')
+        if codename == None:
+          codename = find_match_char(line, 'DISTRIB_CODENAME')
+        if release == None:
+          release = find_match_char(line, 'DISTRIB_RELEASE')
+
+        if release != None and distro_id != None and codename != None:
+          break
+
+      if distro_id == None:
+        distro_id = '?'
+      if codename == None:
+        codename = '?'
+      if release == None:
+        release = '?'
+
+      return '%s "%s" %s' % (distro_id, codename, release)
+
+  def get_first_line_of_file(f):
+    return f[0]
+
+  files_to_parser_functions = [
+    ['/etc/lsb_release', parse_lsb_release_file],
+    ['/etc/make.conf', parse_gentoo],
+    ['/etc/portage/make.conf', parse_gentoo],
+    # Prefer lsb-release after make.conf for Gentoo
+    ['/etc/lsb-release', parse_lsb_release_file],
+    ['/etc/redhat-release', get_first_line_of_file],
+    ['/etc/slackware-release', get_first_line_of_file],
+    ['/etc/mandrake-release', get_first_line_of_file],
+    ['/etc/debian_version', lambda f: 'Debian %s' % f[0]],
+    ['/etc/SuSE-release', get_first_line_of_file],
+    ['/etc/turbolinux-release', get_first_line_of_file],
+  ]
+
+  for release_file_name, parser_callback in files_to_parser_functions:
+    try:
+      with open(release_file_name) as f:
+        return parser_callback(f)
+    except:
+      pass
+
+  return 'Unknown distro'
+
+
+def distro():
+  print('say %s' % wrap('distro', parse_distro()))
+  return
+
 cpuinfo()
 meminfo()
 diskinfo()
@@ -396,4 +486,5 @@ sound()
 video()
 uptime()
 osinfo()
+distro()
 netstream(['', 'eth0'])
