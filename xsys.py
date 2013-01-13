@@ -6,9 +6,19 @@ import platform
 import os
 import fileinput
 import subprocess as sp
+import sys
+import traceback
 
 from time import sleep
 from socket import getfqdn
+
+has_dbus = False
+
+try:
+    import dbus
+    has_dbus = True
+except:
+    pass
 
 __module_name__ = "X-Sys Modernised"
 __module_version__ = "0.1"
@@ -380,14 +390,14 @@ def netdata(word, word_eol, userdata):
     try:
         device = word[1]
     except IndexError:
-        print('You must specify a network device! (e.g.: /netdata eth0)')
+        xchat.prnt('You must specify a network device! (e.g.: /netdata eth0)')
         return xchat.EAT_ALL
 
     try:
         bytes_recv, bytes_sent = parse_netdev(device)
     except:
-        print sys.exc_info()
-        print('Error calling parse_netdev()')
+        # print sys.exc_info()
+        xchat.prnt('Error calling parse_netdev()')
         return xchat.EAT_ALL
 
     bytes_recv /= 1024
@@ -409,14 +419,14 @@ def netstream(word, word_eol, userdata):
     try:
         device = word[1]
     except IndexError:
-        print('You must specify a network device! (e.g.: /netdata eth0)')
+        xchat.prnt('You must specify a network device! (e.g.: /netdata eth0)')
         return
 
     try:
         bytes_recv, bytes_sent = parse_netdev(device)
     except:
-        print sys.exc_info()
-        print('Error calling parse_netdev()')
+        #print(sys.exc_info())
+        xchat.prnt('Error calling parse_netdev()')
         return xchat.EAT_ALL
 
     # Original in C
@@ -427,8 +437,8 @@ def netstream(word, word_eol, userdata):
     try:
         bytes_recv_p, bytes_sent_p = parse_netdev(device)
     except:
-        print sys.exc_info()
-        print('Error calling parse_netdev()')
+        #print sys.exc_info()
+        xchat.prnt('Error calling parse_netdev()')
         return xchat.EAT_ALL
 
     bytes_recv = bytes_recv_p - bytes_recv
@@ -473,8 +483,8 @@ def uptime(word, word_eol, userdata):
     try:
         weeks, days, hours, minutes, seconds = parse_uptime()
     except:
-        print sys.exc_info()
-        print('Error calling parse_uptime()')
+        #print sys.exc_info()
+        xchat.prnt('Error calling parse_uptime()')
         return xchat.EAT_ALL
 
     if minutes != 0 or hours != 0 or days != 0 or weeks != 0:
@@ -632,6 +642,49 @@ def sysinfo(word, word_eol, userdata):
 
     return xchat.EAT_ALL
 
+def now_playing_cb(word, word_eol, userdata):
+    session_bus = dbus.SessionBus()
+    clementine_keys = [
+        'org.mpris.MediaPlayer2.clementine',
+        'org.mpris.clementine'
+    ]
+    dest = xchat.get_context()
+
+    for key in clementine_keys:
+        try:
+            proxy = session_bus.get_object(key, '/Player')
+            data = proxy.GetMetadata()
+
+            format_str = u'%s - %s'
+            args = (
+                data['artist'],
+                data['title'],
+            )
+
+            try:
+                year = data['year']
+                format_str += ' (%d)'
+                args += (data['year'],)
+            except:
+                # print sys.exc_info()
+                pass
+
+            try:
+                output = ('say %s' % wrap('np', format_str % args)).encode('utf-8', errors='replace')
+                dest.command(output)
+            except:
+                # print sys.exc_info()
+                pass
+
+            return xchat.EAT_ALL
+        except:
+            print sys.exc_info()
+            pass
+
+    xchat.prnt('You do not have a supported player running or it is currently not playing a file')
+
+    return xchat.EAT_ALL
+
 
 # xchat.hook_command('xsys2format', xsys2format)
 # xchat.hook_command('playing', playing)
@@ -651,4 +704,7 @@ xchat.hook_command('video', video)
 xchat.hook_command('ether', ether)
 xchat.hook_command('distro', distro)
 # xchat.hook_command('hwmon', hwmon) # TODO Maybe
-# xchat.hook_command('np', np)
+
+if has_dbus:
+    xchat.hook_command('np', now_playing_cb)
+    xchat.prnt('DBus is available. /np command is enabled')
