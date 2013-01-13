@@ -168,7 +168,7 @@ def diskinfo(word, word_eol, userdata):
   total = total_gigabytes
   free = total_free_gigabytes
 
-  #if (total_terabytes > 1):
+  #if total_terabytes > 1:
     #unit = 'TiB'
     #total = total_terabytes
     #free = total_free_terabytes
@@ -184,13 +184,13 @@ def video(word, word_eol, userdata):
   model = ''
   bus_type = ''
 
-  if (os.path.exists(nvidia_file)):
+  if os.path.exists(nvidia_file):
     for line in fileinput.input([nvidia_file]):
       fields = filter(remove_empty_strings, line.split(' '))
 
-      if (fields[0] == 'Model:'):
+      if fields[0] == 'Model:':
         model = ' '.join(fields[1:])
-      elif (fields[0] == 'Bus' and fields[1] == 'Type:'):
+      elif fields[0] == 'Bus' and fields[1] == 'Type:':
         bus_type = ' '.join(fields[2:])
 
   if model:
