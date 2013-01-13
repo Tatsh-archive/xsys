@@ -208,6 +208,7 @@ def video(word, word_eol, userdata):
 
   return xchat.EAT_ALL
 
+# TODO USB devices and Bluetooth
 def get_ethernet_devices():
   devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
   names = []
