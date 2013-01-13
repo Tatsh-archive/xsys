@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-import platform, os, fileinput
+import platform, os, fileinput, sys
 import subprocess as sp
 
 __module_name__ = "X-Sys Replacement"
@@ -12,6 +12,65 @@ def wrap(word, string):
   return u'' + word + u'[' + string + u']'
 
 # Only for Linux at the moment
+linux_PCI_CLASS_NETWORK_ETHERNET = 0x0200
+# linux_PCI_CLASS_MULTIMEDIA_AUDIO = 0x0401
+linux_PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
+
+def parse_pci_path_ids(path):
+  device_file = os.path.join(path, 'device')
+  vendor_file = os.path.join(path, 'vendor')
+  finput = fileinput.input([device_file, vendor_file])
+
+  device_id = int(float.fromhex(finput[0].strip('\n')))
+  vendor_id = int(float.fromhex(finput[1].strip('\n')))
+
+  fileinput.close()
+
+  return [device_id, vendor_id]
+
+def pci_find_by_class(class_id):
+  devices_path = '/sys/bus/pci/devices'
+  devices = []
+
+  if os.path.exists(devices_path) == False:
+    raise EnvironmentError('Path "%s" must exist' % devices_path)
+
+  for name in os.listdir(devices_path):
+    path = os.path.join(devices_path, name)
+    class_file = os.path.join(path, 'class')
+
+    if os.path.isdir(path) and os.path.isfile(class_file): # Only top-level
+      dev_class_id = float.fromhex(fileinput.input([class_file])[0][:6])
+      fileinput.close()
+
+      if dev_class_id == class_id:
+        devices.append(parse_pci_path_ids(path))
+
+  return devices
+
+def pci_find_fullname(device_id, vendor_id):
+  pci_ids_file = '/usr/share/misc/pci.ids'
+  device_name = False
+
+  if os.path.isfile(pci_ids_file) == False:
+    return '%x:%x' % (vendor_id, device_id)
+
+  with open(pci_ids_file) as f:
+    for line in f:
+      if line[0].isspace() == False and ('%x' % vendor_id) in line:
+        vendor_name = ' '.join(filter(remove_empty_strings, line.split(' ')[1:]))
+        break
+
+    for line in f:
+      if ('%x' % device_id) in line:
+        device_name = ' '.join(filter(remove_empty_strings, line.split(' ')[1:]))
+        break
+
+  if device_name != False:
+    return ('%s %s' % (vendor_name, device_name)).replace('\n', '')
+
+  return '%x:%x' % (vendor_id, device_id)
+
 def parse_cpu_info():
   try:
     vendor = 'vendor not found'
@@ -142,8 +201,6 @@ def video():
   if output:
     print('say %s' % wrap('video', output))
 
-
-
 def get_ethernet_devices():
   devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
   names = []
@@ -156,8 +213,40 @@ def get_ethernet_devices():
 def ether():
   print('say %s' % wrap('ethernet', ', '.join(get_ethernet_devices())))
 
+# TODO Non-PCI when not using ALSA
+def sound():
+  names = []
+  alsa_sound_card_list_file = '/proc/asound/cards'
+
+  if os.path.isfile(alsa_sound_card_list_file) == False:
+    devices = pci_find_by_class(linux_PCI_CLASS_MULTIMEDIA_AUDIO)
+    for device_id, vendor_id in devices:
+      names.append(pci_find_fullname(device_id, vendor_id))
+
+    output = ', '.join(names)
+
+    if output:
+      print('say %s' % wrap('sound', output))
+      return
+
+  with open(alsa_sound_card_list_file) as f:
+    for line in f:
+      if line[0].isdigit() or line[1].isdigit():
+        card_name = ''
+        pos = line.find(':')
+        card_id = long(''.join(filter(remove_empty_strings, line.split(' '))[0]).strip())
+        card_name = '%s' % line[(pos + 2):]
+
+        names.append(card_name)
+
+  output = ', '.join(names).replace('\n', '')
+
+  if output:
+    print('say %s' % wrap('sound', output))
+
 cpuinfo()
 meminfo()
 diskinfo()
 ether()
+sound()
 video()

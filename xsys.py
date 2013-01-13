@@ -228,6 +228,41 @@ def ether(word, word_eol, userdata):
 
   return xchat.EAT_ALL
 
+# TODO Non-PCI when not using ALSA
+def sound(word, word_eol, userdata):
+  names = []
+  alsa_sound_card_list_file = '/proc/asound/cards'
+
+  if os.path.isfile(alsa_sound_card_list_file) == False:
+    devices = pci_find_by_class(linux_PCI_CLASS_MULTIMEDIA_AUDIO)
+    for device_id, vendor_id in devices:
+      names.append(pci_find_fullname(device_id, vendor_id))
+
+    output = ', '.join(names)
+
+    if output:
+      dest = xchat.get_context()
+      dest.command('say %s' % wrap('sound', output))
+      return xchat.EAT_ALL
+
+  with open(alsa_sound_card_list_file) as f:
+    for line in f:
+      if line[0].isdigit() or line[1].isdigit():
+        card_name = ''
+        pos = line.find(':')
+        card_id = long(''.join(filter(remove_empty_strings, line.split(' '))[0]).strip())
+        card_name = '%s' % line[(pos + 2):]
+
+        names.append(card_name)
+
+  output = ', '.join(names).replace('\n', '')
+
+  if output:
+    dest = xchat.get_context()
+    dest.command('say %s' % wrap('sound', output))
+
+  return xchat.EAT_ALL
+
 #xchat.hook_command('sysinfo', sysinfo)
 #xchat.hook_command('xsys2format', xsys2format)
 #xchat.hook_command('playing', playing)
@@ -236,7 +271,7 @@ def ether(word, word_eol, userdata):
 xchat.hook_command('cpuinfo', cpuinfo)
 xchat.hook_command('meminfo', meminfo)
 xchat.hook_command('diskinfo', diskinfo)
-#xchat.hook_command('sound', sound)
+xchat.hook_command('sound', sound)
 xchat.hook_command('video', video)
 #xchat.hook_command('np', np)
 #xchat.hook_command('netdata', netdata)
