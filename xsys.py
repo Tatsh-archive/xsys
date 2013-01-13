@@ -178,6 +178,8 @@ def diskinfo(word, word_eol, userdata):
   output = 'Total: %.1f %s/%.1f %s free' % (free, unit, total, unit)
   dest.command('say %s' % wrap('disk', output))
 
+  return xchat.EAT_ALL
+
 def video(word, word_eol, userdata):
   nvidia_file = '/proc/driver/nvidia/gpus/0/information'
   output = ''
@@ -204,6 +206,8 @@ def video(word, word_eol, userdata):
     dest = xchat.get_context()
     dest.command('say %s' % wrap('video', output))
 
+  return xchat.EAT_ALL
+
 def get_ethernet_devices():
   devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
   names = []
@@ -220,6 +224,8 @@ def ether(word, word_eol, userdata):
   if output:
     dest = xchat.get_context()
     dest.command('say %s' % wrap('ethernet', output))
+
+  return xchat.EAT_ALL
 
 #xchat.hook_command('sysinfo', sysinfo)
 #xchat.hook_command('xsys2format', xsys2format)
