@@ -110,9 +110,10 @@ def cpuinfo(word, word_eol, userdata):
 def meminfo(word, word_eol, userdata):
   dest = xchat.get_context()
 
-  lines = sp.check_output('cat /proc/meminfo | grep -E "^Mem(Total|Free)"', shell=True).split("\n")
-  total_kb = 0
-  free_kb = 0
+  lines = sp.check_output('cat /proc/meminfo | grep -E "^Mem(Total|Free)|^Cached"', shell=True).split("\n")
+  total_kb = None
+  free_kb = None
+  cached_kb = None
 
   for line in lines:
     parts = line.split(':')
@@ -125,11 +126,13 @@ def meminfo(word, word_eol, userdata):
       total_kb = value
     elif parts[0] == 'MemFree':
       free_kb = value
+    elif parts[0] == 'Cached':
+      cached_kb = value
 
-    if total_kb != 0 and free_kb != 0:
+    if total_kb != None and free_kb != None and cached_kb != None:
       break
 
-  free_mb = free_kb / 1024
+  free_mb = (free_kb / 1024) + (cached_kb / 1024)
   total_mb = total_kb / 1024
   unit = 'MiB'
   output = 'Physical: %.1f %s/%.1f %s free' % (free_mb, unit, total_mb, unit)
