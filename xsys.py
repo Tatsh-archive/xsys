@@ -10,7 +10,7 @@ import subprocess as sp
 from time import sleep
 from socket import getfqdn
 
-__module_name__ = "X-Sys Replacement"
+__module_name__ = "X-Sys Modernised"
 __module_version__ = "0.1"
 __module_description__ = "X-Sys replacement in Python"
 
@@ -547,12 +547,17 @@ def distro(word, word_eol, userdata):
     dest.command('say %s' % wrap('distro', parse_distro()))
     return xchat.EAT_ALL
 
+def xsys(word, word_eol, userdata):
+    dest = xchat.get_context()
+    dest.command('me is using %s v%s (https://github.com/Tatsh/%s)' % (__module_name__, __module_version__, __module_name__))
+    return xchat.EAT_ALL
+
 # xchat.hook_command('xsys2format', xsys2format)
 # xchat.hook_command('playing', playing)
 # xchat.hook_command('percentages', percentages)
 # xchat.hook_command('npaction', npaction)
 # xchat.hook_command('sysinfo', sysinfo)
-# xchat.hook_command('xsys', xsys)
+xchat.hook_command('xsys', xsys)
 xchat.hook_command('cpuinfo', cpuinfo)
 xchat.hook_command('sysuptime', uptime)
 xchat.hook_command('osinfo', osinfo)

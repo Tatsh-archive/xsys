@@ -477,6 +477,10 @@ def distro():
   print('say %s' % wrap('distro', parse_distro()))
   return
 
+def xsys():
+  print('me is using X-Sys v%s' % __module_version__)
+  return
+
 cpuinfo()
 meminfo()
 diskinfo()
