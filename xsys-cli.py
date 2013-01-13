@@ -244,9 +244,54 @@ def sound():
   if output:
     print('say %s' % wrap('sound', output))
 
+def parse_netdev(device_name):
+  dev_line = None
+
+  with open('/proc/net/dev') as f:
+    for line in f:
+      stripped_line = line.lstrip()
+      if cmp(stripped_line[:len(device_name)], device_name) == 0:
+        dev_line = stripped_line
+        break
+
+  if dev_line == None:
+    raise Exception('Unable to find line for device %s' % device_name)
+
+  pos = dev_line.find(':')
+  pos += 1
+
+  line = filter(remove_empty_strings, dev_line[pos:].split(' '))
+
+  bytes_recv = long(line[0])
+  bytes_sent = long(line[8])
+
+  return [bytes_recv, bytes_sent]
+
+def netdata(word):
+  try:
+    device = word[1]
+  except IndexError:
+    print('You must specify a network device! (e.g.: /netdata eth0)')
+    return
+
+  try:
+    bytes_recv, bytes_sent = parse_netdev(device)
+  except:
+    print sys.exc_info()
+    print('Error calling parse_netdev()')
+    return
+
+  bytes_recv /= 1024
+  bytes_sent /= 1024
+
+  output = '%s %.1f MiB received, %.1f MiB sent' % (device, float(bytes_recv/1024.0), float(bytes_sent/1024.0))
+
+  print('say %s' % wrap('netdata', output))
+
 cpuinfo()
 meminfo()
 diskinfo()
 ether()
+netdata(['', 'eth0'])
 sound()
 video()
