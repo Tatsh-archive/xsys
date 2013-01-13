@@ -4,6 +4,8 @@
 import platform, os, fileinput, sys
 import subprocess as sp
 
+from time import sleep
+
 __module_name__ = "X-Sys Replacement"
 __module_version__ = "0.1"
 __module_description__ = "X-Sys replacement in Python"
@@ -288,6 +290,52 @@ def netdata(word):
 
   print('say %s' % wrap('netdata', output))
 
+def netstream(word):
+  recv_suffix = 'B/s'
+  sent_suffix = 'B/s'
+
+  try:
+    device = word[1]
+  except IndexError:
+    print('You must specify a network device! (e.g.: /netdata eth0)')
+    return
+
+  try:
+    bytes_recv, bytes_sent = parse_netdev(device)
+  except:
+    print sys.exc_info()
+    print('Error calling parse_netdev()')
+    return
+
+  # Original in C
+  # struct timespec ts = {1, 0};
+  # while(nanosleep(&ts, &ts) < 0);
+  sleep(1.0)
+
+  try:
+    bytes_recv_p, bytes_sent_p = parse_netdev(device)
+  except:
+    print sys.exc_info()
+    print('Error calling parse_netdev()')
+    return
+
+  bytes_recv = bytes_recv_p - bytes_recv
+  bytes_sent = bytes_sent_p - bytes_sent
+
+  if bytes_recv > 1024:
+    bytes_recv /= 1024
+    recv_suffix = 'KiB/s'
+
+  if bytes_sent > 1024:
+    bytes_sent /= 1024
+    sent_suffix = 'KiB/s'
+
+  output = '%s: Receiving %lu %s, Sending %lu %s' % (device, bytes_recv, recv_suffix, bytes_sent, sent_suffix)
+
+  print('say %s' % wrap('netstream', output))
+
+  return
+
 cpuinfo()
 meminfo()
 diskinfo()
@@ -295,3 +343,4 @@ ether()
 netdata(['', 'eth0'])
 sound()
 video()
+netstream(['', 'eth0'])
