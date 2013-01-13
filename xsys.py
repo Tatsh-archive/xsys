@@ -20,6 +20,8 @@ def wrap(word, string):
 
 # Only for Linux at the moment
 linux_PCI_CLASS_NETWORK_ETHERNET = 0x0200
+linux_PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
+linux_PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
 
 
 def parse_pci_path_ids(path):
@@ -47,7 +49,7 @@ def pci_find_by_class(class_id):
         class_file = os.path.join(path, 'class')
 
         if os.path.isdir(path) \
-        and os.path.isfile(class_file): # Only top-level
+                and os.path.isfile(class_file):  # Only top-level
             hex_value = fileinput.input([class_file])[0][:6]
             dev_class_id = float.fromhex(hex_value)
             fileinput.close()
@@ -90,7 +92,7 @@ def remove_empty_strings(value):
     return True
 
 
-def cpuinfo(word, word_eol, userdata):
+def sysinfo_cpuinfo():
     def parse_cpu_info():
         try:
             vendor = 'vendor not found'
@@ -111,7 +113,6 @@ def cpuinfo(word, word_eol, userdata):
         finally:
             return return_value
 
-    dest = xchat.get_context()
     info = parse_cpu_info()
     cpu_model = platform.processor()
     ghz = info['freq'] > 1000
@@ -123,16 +124,17 @@ def cpuinfo(word, word_eol, userdata):
     else:
         output += '%.2f MHz' % (info['freq'])
 
-    dest.command('say %s' % wrap('cpu', output))
+    return output
 
+
+def cpuinfo(word, word_eol, userdata):
+    dest = xchat.get_context()
+    dest.command('say %s' % wrap('cpu', sysinfo_cpuinfo()))
     return xchat.EAT_ALL
 
+
 # TODO Handle GiB
-
-
-def meminfo(word, word_eol, userdata):
-    dest = xchat.get_context()
-
+def sysinfo_meminfo():
     lines = sp.check_output(
         'cat /proc/meminfo | grep -E "^Mem(Total|Free)|^Cached"',
         shell=True
@@ -156,8 +158,8 @@ def meminfo(word, word_eol, userdata):
             cached_kb = value
 
         if total_kb is not None \
-        and free_kb is not None \
-        and cached_kb is not None:
+            and free_kb is not None \
+                and cached_kb is not None:
             break
 
     free_mb = (free_kb / 1024) + (cached_kb / 1024)
@@ -165,12 +167,16 @@ def meminfo(word, word_eol, userdata):
     unit = 'MiB'
     output = 'Physical: %.1f %s/%.1f %s free' % (free_mb, unit, total_mb, unit)
 
-    dest.command('say %s' % wrap('memory', output))
+    return output
 
+
+def meminfo(word, word_eol, userdata):
+    dest = xchat.get_context()
+    dest.command('say %s' % wrap('memory', sysinfo_meminfo()))
     return xchat.EAT_ALL
 
 
-def diskinfo(word, word_eol, userdata):
+def sysinfo_diskinfo():
     lines = sp.check_output(
         'df -T | grep -E "^/dev/(s|h|x)(d|vd)"', shell=True).split('\n')
     total_free_space = 0
@@ -201,15 +207,17 @@ def diskinfo(word, word_eol, userdata):
         # total = total_terabytes
         # free = total_free_terabytes
 
+    return 'Total: %.1f %s/%.1f %s free' % (free, unit, total, unit)
+
+
+def diskinfo(word, word_eol, userdata):
     dest = xchat.get_context()
-
-    output = 'Total: %.1f %s/%.1f %s free' % (free, unit, total, unit)
-    dest.command('say %s' % wrap('disk', output))
-
+    dest.command('say %s' % wrap('disk', sysinfo_diskinfo()))
     return xchat.EAT_ALL
 
 
-def video(word, word_eol, userdata):
+# TODO Support other video cards
+def sysinfo_video():
     nvidia_file = '/proc/driver/nvidia/gpus/0/information'
     output = ''
     model = ''
@@ -231,9 +239,17 @@ def video(word, word_eol, userdata):
 
     output = output.replace('\n', '')
 
+    return output
+
+
+def video(word, word_eol, userdata):
+    dest = xchat.get_context()
+    output = sysinfo_video()
+
     if output:
-        dest = xchat.get_context()
         dest.command('say %s' % wrap('video', output))
+    else:
+        dest.command('say %s' % wrap('video', 'Unknown video card'))
 
     return xchat.EAT_ALL
 
@@ -258,15 +274,18 @@ def ether(word, word_eol, userdata):
 
     return xchat.EAT_ALL
 
+
 # TODO Non-PCI when not using ALSA
-
-
-def sound(word, word_eol, userdata):
+def sysinfo_sound():
     names = []
     alsa_sound_card_list_file = '/proc/asound/cards'
 
     if os.path.isfile(alsa_sound_card_list_file) is False:
         devices = pci_find_by_class(linux_PCI_CLASS_MULTIMEDIA_AUDIO)
+        for device_id, vendor_id in devices:
+            names.append(pci_find_fullname(device_id, vendor_id))
+
+        devices = pci_find_by_class(linux_PCI_CLASS_MULTIMEDIA_AUDIO_ALT)
         for device_id, vendor_id in devices:
             names.append(pci_find_fullname(device_id, vendor_id))
 
@@ -290,9 +309,17 @@ def sound(word, word_eol, userdata):
 
     output = ', '.join(names).replace('\n', '')
 
+    return output
+
+
+def sound(word, word_eol, userdata):
+    dest = xchat.get_context()
+    output = sysinfo_sound()
+
     if output:
-        dest = xchat.get_context()
         dest.command('say %s' % wrap('sound', output))
+    else:
+        dest.command('say %s' % wrap('sound', 'No sound cards found'))
 
     return xchat.EAT_ALL
 
@@ -443,14 +470,15 @@ def uptime(word, word_eol, userdata):
     return xchat.EAT_ALL
 
 
-def osinfo(word, word_eol, userdata):
+def sysinfo_osinfo():
     kernel = '%s %s %s' % (
         platform.system(), platform.release(), platform.machine())
-    output = '%s@%s %s' % (os.environ['USER'], getfqdn(), kernel)
+    return '%s@%s %s' % (os.environ['USER'], getfqdn(), kernel)
+
+
+def osinfo(word, word_eol, userdata):
     dest = xchat.get_context()
-
-    xchat.command('say %s' % wrap('osinfo', output))
-
+    dest.command('say %s' % wrap('osinfo', sysinfo_osinfo()))
     return xchat.EAT_ALL
 
 
@@ -502,8 +530,8 @@ def parse_distro():
                 release = find_match_char(line, 'DISTRIB_RELEASE')
 
             if release is not None \
-            and distro_id is not None \
-            and codename is not None:
+                and distro_id is not None \
+                    and codename is not None:
                 break
 
         if distro_id is None:
@@ -547,16 +575,39 @@ def distro(word, word_eol, userdata):
     dest.command('say %s' % wrap('distro', parse_distro()))
     return xchat.EAT_ALL
 
+
 def xsys(word, word_eol, userdata):
     dest = xchat.get_context()
-    dest.command('me is using %s v%s (https://github.com/Tatsh/%s)' % (__module_name__, __module_version__, __module_name__))
+    dest.command('me is using %s v%s (https://github.com/Tatsh/%s)' % (
+        __module_name__,
+        __module_version__,
+        __module_name__.split(' ')[0].replace('-', '').lower())
+    )
     return xchat.EAT_ALL
+
+
+def sysinfo(word, word_eol, userdata):
+    dest = xchat.get_context()
+    output = []
+
+    output.append(wrap('os', sysinfo_osinfo()))
+    output.append(wrap('distro', parse_distro()))
+    output.append(wrap('cpu', sysinfo_cpuinfo()))
+    output.append(wrap('mem', sysinfo_meminfo()))
+    output.append(wrap('disk', sysinfo_diskinfo()))
+    output.append(wrap('video', sysinfo_video()))
+    output.append(wrap('sound', sysinfo_sound()))
+
+    dest.command('say %s' % ' '.join(output))
+
+    return xchat.EAT_ALL
+
 
 # xchat.hook_command('xsys2format', xsys2format)
 # xchat.hook_command('playing', playing)
 # xchat.hook_command('percentages', percentages)
 # xchat.hook_command('npaction', npaction)
-# xchat.hook_command('sysinfo', sysinfo)
+xchat.hook_command('sysinfo', sysinfo)
 xchat.hook_command('xsys', xsys)
 xchat.hook_command('cpuinfo', cpuinfo)
 xchat.hook_command('sysuptime', uptime)
