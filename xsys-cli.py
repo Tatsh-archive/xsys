@@ -336,6 +336,49 @@ def netstream(word):
 
   return
 
+def parse_uptime():
+  uptime = 0
+
+  with open('/proc/uptime') as f:
+    for line in f:
+      uptime = float(line.split(' ')[0].strip())
+      break
+
+  seconds = uptime % 60
+  minutes = (uptime / 60) % 60
+  hours   = (uptime / 3600) % 24
+  days    = (uptime / 86400) % 7
+  weeks   = uptime / 604800
+
+  return [weeks, days, hours, minutes, seconds]
+
+def uptime():
+  output = ''
+
+  try:
+    weeks, days, hours, minutes, seconds = parse_uptime()
+  except:
+    print sys.exc_info()
+    print('Error calling parse_uptime()')
+    return
+
+  if minutes != 0 or hours != 0 or days != 0 or weeks != 0:
+    if hours != 0 or days != 0 or weeks != 0:
+      if days != 0 or weeks != 0:
+        if weeks != 0:
+          output = '%dw %dd %dh %dm %ds' % (weeks, days, hours, minutes, seconds)
+        else:
+          output = '%dd %dh %dm %ds' % (days, hours, minutes, seconds)
+      else:
+        output = '%dh %dm %ds' % (hours, minutes, seconds)
+    else:
+      output = '%dm %ds' % (minutes, seconds)
+
+  if output:
+    print('say %s' % wrap('uptime', output))
+
+  return
+
 cpuinfo()
 meminfo()
 diskinfo()
@@ -343,4 +386,5 @@ ether()
 netdata(['', 'eth0'])
 sound()
 video()
+uptime()
 netstream(['', 'eth0'])
