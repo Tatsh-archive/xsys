@@ -642,6 +642,7 @@ def sysinfo(word, word_eol, userdata):
 
     return xchat.EAT_ALL
 
+
 def now_playing_cb(word, word_eol, userdata):
     session_bus = dbus.SessionBus()
     clementine_keys = [
@@ -670,7 +671,9 @@ def now_playing_cb(word, word_eol, userdata):
                 pass
 
             try:
-                output = ('say %s' % wrap('np', format_str % args)).encode('utf-8', errors='replace')
+                output = ('say %s' % wrap('np', format_str % args)).encode(
+                    'utf-8',
+                    errors='replace')
                 dest.command(output)
             except:
                 # print sys.exc_info()
@@ -681,7 +684,8 @@ def now_playing_cb(word, word_eol, userdata):
             print sys.exc_info()
             pass
 
-    xchat.prnt('You do not have a supported player running or it is currently not playing a file')
+    xchat.prnt('You do not have a supported player running or it is currently'
+               'not playing a file')
 
     return xchat.EAT_ALL
 
