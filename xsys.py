@@ -537,6 +537,8 @@ def parse_distro():
 
         for line in make_conf_file:
             keywords = line.find('ACCEPT_KEYWORDS')
+            if keywords != -1:
+                break
 
         if keywords == -1:
             return 'Gentoo Linux (stable)'
