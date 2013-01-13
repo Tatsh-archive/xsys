@@ -6,6 +6,7 @@ import platform, os, fileinput
 import subprocess as sp
 
 from time import sleep
+from socket import getfqdn
 
 __module_name__ = "X-Sys Replacement"
 __module_version__ = "0.1"
@@ -406,6 +407,15 @@ def uptime(word, word_eol, userdata):
 
   return xchat.EAT_ALL
 
+def osinfo(word, word_eol, userdata):
+  kernel = '%s %s %s' % (platform.system(), platform.release(), platform.machine())
+  output = '%s@%s %s' % (os.environ['USER'], getfqdn(), kernel)
+  dest = xchat.get_context()
+
+  xchat.command('say %s' % wrap('osinfo', output))
+
+  return xchat.EAT_ALL
+
 #xchat.hook_command('xsys2format', xsys2format)
 #xchat.hook_command('playing', playing)
 #xchat.hook_command('percentages', percentages)
@@ -414,7 +424,7 @@ def uptime(word, word_eol, userdata):
 #xchat.hook_command('xsys', xsys)
 xchat.hook_command('cpuinfo', cpuinfo)
 xchat.hook_command('sysuptime', uptime)
-#xchat.hook_command('osinfo', osinfo)
+xchat.hook_command('osinfo', osinfo)
 xchat.hook_command('sound', sound)
 xchat.hook_command('netdata', netdata)
 xchat.hook_command('netstream', netstream)

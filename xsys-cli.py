@@ -5,6 +5,7 @@ import platform, os, fileinput, sys
 import subprocess as sp
 
 from time import sleep
+from socket import getfqdn
 
 __module_name__ = "X-Sys Replacement"
 __module_version__ = "0.1"
@@ -379,6 +380,13 @@ def uptime():
 
   return
 
+def osinfo():
+  kernel = '%s %s %s' % (platform.system(), platform.release(), platform.machine())
+  output = '%s@%s %s' % (os.environ['USER'], getfqdn(), kernel)
+  print('say %s' % wrap('osinfo', output))
+
+  return
+
 cpuinfo()
 meminfo()
 diskinfo()
@@ -387,4 +395,5 @@ netdata(['', 'eth0'])
 sound()
 video()
 uptime()
+osinfo()
 netstream(['', 'eth0'])
