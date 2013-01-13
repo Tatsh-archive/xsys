@@ -204,16 +204,16 @@ def video():
   if output:
     print('say %s' % wrap('video', output))
 
-def get_ethernet_devices():
-  devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
-  names = []
-
-  for device_id, vendor_id in devices:
-    names.append(pci_find_fullname(device_id, vendor_id))
-
-  return names
-
 def ether():
+  def get_ethernet_devices():
+    devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
+    names = []
+
+    for device_id, vendor_id in devices:
+      names.append(pci_find_fullname(device_id, vendor_id))
+
+    return names
+
   print('say %s' % wrap('ethernet', ', '.join(get_ethernet_devices())))
 
 # TODO Non-PCI when not using ALSA
@@ -337,23 +337,23 @@ def netstream(word):
 
   return
 
-def parse_uptime():
-  uptime = 0
-
-  with open('/proc/uptime') as f:
-    for line in f:
-      uptime = float(line.split(' ')[0].strip())
-      break
-
-  seconds = uptime % 60
-  minutes = (uptime / 60) % 60
-  hours   = (uptime / 3600) % 24
-  days    = (uptime / 86400) % 7
-  weeks   = uptime / 604800
-
-  return [weeks, days, hours, minutes, seconds]
-
 def uptime():
+  def parse_uptime():
+    uptime = 0
+
+    with open('/proc/uptime') as f:
+      for line in f:
+        uptime = float(line.split(' ')[0].strip())
+        break
+
+    seconds = uptime % 60
+    minutes = (uptime / 60) % 60
+    hours   = (uptime / 3600) % 24
+    days    = (uptime / 86400) % 7
+    weeks   = uptime / 604800
+
+    return [weeks, days, hours, minutes, seconds]
+
   output = ''
 
   try:

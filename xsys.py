@@ -73,26 +73,31 @@ def pci_find_fullname(device_id, vendor_id):
 
   return '%x:%x' % (vendor_id, device_id)
 
-def parse_cpu_info():
-  try:
-    vendor = 'vendor not found'
-    freq = 0
-    return_value = {'freq': freq, 'vendor': vendor, 'count': 1}
-
-    speed_output = sp.check_output('cat /proc/cpuinfo | grep cpu\ MHz', shell=True).split("\n")
-    vendor = sp.check_output('uname -i', shell=True).split("\n")[0]
-
-    return_value['vendor'] = vendor
-    multiplier = len(speed_output) - 1 # Last is usually ''
-    speed = speed_output[0].split('\t\t: ')[1]
-    return_value['freq'] = float(speed)
-    return_value['count'] = multiplier
-  except CalledProcessError:
-    pass
-  finally:
-    return return_value
+def remove_empty_strings(value):
+  if value.strip().replace('\n', '') == '':
+    return False
+  return True
 
 def cpuinfo(word, word_eol, userdata):
+  def parse_cpu_info():
+    try:
+      vendor = 'vendor not found'
+      freq = 0
+      return_value = {'freq': freq, 'vendor': vendor, 'count': 1}
+
+      speed_output = sp.check_output('cat /proc/cpuinfo | grep cpu\ MHz', shell=True).split("\n")
+      vendor = sp.check_output('uname -i', shell=True).split("\n")[0]
+
+      return_value['vendor'] = vendor
+      multiplier = len(speed_output) - 1 # Last is usually ''
+      speed = speed_output[0].split('\t\t: ')[1]
+      return_value['freq'] = float(speed)
+      return_value['count'] = multiplier
+    except CalledProcessError:
+      pass
+    finally:
+      return return_value
+
   dest = xchat.get_context()
   info = parse_cpu_info()
   cpu_model = platform.processor()
@@ -143,11 +148,6 @@ def meminfo(word, word_eol, userdata):
   dest.command('say %s' % wrap('memory', output))
 
   return xchat.EAT_ALL
-
-def remove_empty_strings(value):
-  if value.strip().replace('\n', '') == '':
-    return False
-  return True
 
 def diskinfo(word, word_eol, userdata):
   lines = sp.check_output('df -T | grep -E "^/dev/(s|h|x)(d|vd)"', shell=True).split('\n')
@@ -214,17 +214,17 @@ def video(word, word_eol, userdata):
 
   return xchat.EAT_ALL
 
-# TODO USB devices and Bluetooth
-def get_ethernet_devices():
-  devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
-  names = []
-
-  for device_id, vendor_id in devices:
-    names.append(pci_find_fullname(device_id, vendor_id))
-
-  return names
-
 def ether(word, word_eol, userdata):
+  # TODO USB devices and Bluetooth
+  def get_ethernet_devices():
+    devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
+    names = []
+
+    for device_id, vendor_id in devices:
+      names.append(pci_find_fullname(device_id, vendor_id))
+
+    return names
+
   names = get_ethernet_devices()
   output = ', '.join(names)
 
@@ -363,23 +363,23 @@ def netstream(word, word_eol, userdata):
 
   return xchat.EAT_ALL
 
-def parse_uptime():
-  uptime = 0
-
-  with open('/proc/uptime') as f:
-    for line in f:
-      uptime = float(line.split(' ')[0].strip())
-      break
-
-  seconds = uptime % 60
-  minutes = (uptime / 60) % 60
-  hours   = (uptime / 3600) % 24
-  days    = (uptime / 86400) % 7
-  weeks   = uptime / 604800
-
-  return [weeks, days, hours, minutes, seconds]
-
 def uptime(word, word_eol, userdata):
+  def parse_uptime():
+    uptime = 0
+
+    with open('/proc/uptime') as f:
+      for line in f:
+        uptime = float(line.split(' ')[0].strip())
+        break
+
+    seconds = uptime % 60
+    minutes = (uptime / 60) % 60
+    hours   = (uptime / 3600) % 24
+    days    = (uptime / 86400) % 7
+    weeks   = uptime / 604800
+
+    return [weeks, days, hours, minutes, seconds]
+
   output = ''
 
   try:
