@@ -6,4 +6,4 @@ Currently this script only supports Linux.
 
 # Installation
 
-Copy `xsys.py` to ~`/.xchat2`.
+Copy `xsys.py` to `~/.xchat2`.
