@@ -309,7 +309,7 @@ def netdata(word, word_eol, userdata):
   output = '%s %.1f MiB received, %.1f MiB sent' % (device, float(bytes_recv/1024.0), float(bytes_sent/1024.0))
   dest = xchat.get_context()
 
-  xchat.command('say %s' % wrap('netdata', output))
+  dest.command('say %s' % wrap('netdata', output))
 
   return xchat.EAT_ALL
 
