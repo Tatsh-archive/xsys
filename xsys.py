@@ -40,6 +40,7 @@ USB_CLASS_BLUETOOTH = 0xe0
 # TODO Setting by /percentages command
 percentages = False
 
+
 # Only for Linux at the moment
 def parse_pci_path_ids(path):
     device_file = os.path.join(path, 'device')
@@ -75,6 +76,7 @@ def pci_find_by_class(class_id):
                 devices.append(parse_pci_path_ids(path))
 
     return devices
+
 
 def get_device_fullname(device_id, vendor_id, ids_file):
     device_name = False
@@ -349,7 +351,8 @@ def sysinfo_sound():
             dest.command('say %s' % wrap('sound', output))
             return xchat.EAT_ALL
 
-    usb_no_name_regex = '(?P<prefix>.*)USB\sDevice\s0x(?P<vendor_id>[\da-f]{3,4})\:0x(?P<device_id>[\da-f]{3,4})'
+    usb_no_name_regex = ('(?P<prefix>.*)USB\sDevice\s0x(?P<vendor_id>'
+                         '[\da-f]{3,4})\:0x(?P<device_id>[\da-f]{3,4})')
 
     with open(alsa_sound_card_list_file) as f:
         for line in f:
@@ -361,13 +364,16 @@ def sysinfo_sound():
                 card_name = '%s' % line[(pos + 2):]
                 match = re.search(usb_no_name_regex, card_name)
 
-                if match != None:
+                if match is not None:
                     dictionary = match.groupdict()
                     prefix = dictionary['prefix']
-                    vendor_id = int(float.fromhex('0x' + dictionary['vendor_id']))
-                    device_id = int(float.fromhex('0x' + dictionary['device_id']))
+                    vendor_id = float.fromhex('0x' + dictionary['vendor_id'])
+                    vendor_id = int(vendor_id)
+                    device_id = float.fromhex('0x' + dictionary['device_id'])
+                    device_id = int(device_id)
 
-                    card_name = prefix + usb_find_fullname(device_id, vendor_id)
+                    card_name = (prefix +
+                                 usb_find_fullname(device_id, vendor_id))
 
                 names.append(card_name)
 
