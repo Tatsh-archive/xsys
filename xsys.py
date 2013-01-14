@@ -761,8 +761,8 @@ def sysinfo_hwmon():
                     j += 1
                     break
 
-                regex = '^temp(?P<index>\d)\:\s+(?P<temp>[\+\-]\d+\.\d+°C)(?' +
-                ':\s+\(.*\)\s+sensor\s+\=\s+(?P<sensor>\w+))?'
+                regex = ('^temp(?P<index>\d)\:\s+(?P<temp>[\+\-]\d+\.\d+°C)(?' +
+                ':\s+\(.*\)\s+sensor\s+\=\s+(?P<sensor>\w+))?')
 
                 matches = re.search(regex, lines[j])
 
