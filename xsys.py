@@ -7,7 +7,7 @@ import os
 import fileinput
 import subprocess as sp
 import sys
-import traceback
+import re
 
 from time import sleep
 from socket import getfqdn
@@ -28,15 +28,19 @@ __module_description__ = "X-Sys replacement in Python"
 def wrap(word, string):
     return u'' + word + u'[' + string + u']'
 
-# Only for Linux at the moment
-linux_PCI_CLASS_NETWORK_ETHERNET = 0x0200
-linux_PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
-linux_PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
+PCI_CLASS_NETWORK_ETHERNET = 0x0200
+PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
+PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
+
+# http://en.wikipedia.org/wiki/Universal_Serial_Bus#Device_classes
+USB_CLASS_NETWORK = 0x02
+USB_CLASS_INTERFACE_NETWORK = 0x09
+USB_CLASS_BLUETOOTH = 0xe0
 
 # TODO Setting by /percentages command
 percentages = False
 
-
+# Only for Linux at the moment
 def parse_pci_path_ids(path):
     device_file = os.path.join(path, 'device')
     vendor_file = os.path.join(path, 'vendor')
@@ -72,15 +76,14 @@ def pci_find_by_class(class_id):
 
     return devices
 
-
-def pci_find_fullname(device_id, vendor_id):
-    pci_ids_file = '/usr/share/misc/pci.ids'
+def get_device_fullname(device_id, vendor_id, ids_file):
     device_name = False
+    vendor_name = 'Unknown vendor'
 
-    if os.path.isfile(pci_ids_file) is False:
+    if os.path.isfile(ids_file) is False:
         return '%x:%x' % (vendor_id, device_id)
 
-    with open(pci_ids_file) as f:
+    with open(ids_file) as f:
         for line in f:
             if line[0].isspace() is False and ('%x' % vendor_id) in line:
                 vendor_name = ' '.join(
@@ -97,6 +100,16 @@ def pci_find_fullname(device_id, vendor_id):
         return ('%s %s' % (vendor_name, device_name)).replace('\n', '')
 
     return '%x:%x' % (vendor_id, device_id)
+
+
+def pci_find_fullname(device_id, vendor_id):
+    pci_ids_file = '/usr/share/misc/pci.ids'
+    return get_device_fullname(device_id, vendor_id, pci_ids_file)
+
+
+def usb_find_fullname(device_id, vendor_id):
+    usb_ids_file = '/usr/share/misc/usb.ids'
+    return get_device_fullname(device_id, vendor_id, usb_ids_file)
 
 
 def remove_empty_strings(value):
@@ -295,7 +308,7 @@ def video(word, word_eol, userdata):
 def ether(word, word_eol, userdata):
     # TODO USB devices and Bluetooth
     def get_ethernet_devices():
-        devices = pci_find_by_class(linux_PCI_CLASS_NETWORK_ETHERNET)
+        devices = pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET)
         names = []
 
         for device_id, vendor_id in devices:
@@ -319,13 +332,15 @@ def sysinfo_sound():
     alsa_sound_card_list_file = '/proc/asound/cards'
 
     if os.path.isfile(alsa_sound_card_list_file) is False:
-        devices = pci_find_by_class(linux_PCI_CLASS_MULTIMEDIA_AUDIO)
-        for device_id, vendor_id in devices:
-            names.append(pci_find_fullname(device_id, vendor_id))
+        classes = [
+            PCI_CLASS_MULTIMEDIA_AUDIO,
+            PCI_CLASS_MULTIMEDIA_AUDIO_ALT
+        ]
 
-        devices = pci_find_by_class(linux_PCI_CLASS_MULTIMEDIA_AUDIO_ALT)
-        for device_id, vendor_id in devices:
-            names.append(pci_find_fullname(device_id, vendor_id))
+        for class_id in classes:
+            devices = pci_find_by_class(class_id)
+            for device_id, vendor_id in devices:
+                names.append(pci_find_fullname(device_id, vendor_id))
 
         output = ', '.join(names)
 
@@ -333,6 +348,8 @@ def sysinfo_sound():
             dest = xchat.get_context()
             dest.command('say %s' % wrap('sound', output))
             return xchat.EAT_ALL
+
+    usb_no_name_regex = '(?P<prefix>.*)USB\sDevice\s0x(?P<vendor_id>[\da-f]{3,4})\:0x(?P<device_id>[\da-f]{3,4})'
 
     with open(alsa_sound_card_list_file) as f:
         for line in f:
@@ -342,6 +359,15 @@ def sysinfo_sound():
                 card_id = long(''.join(
                     filter(remove_empty_strings, line.split(' '))[0]).strip())
                 card_name = '%s' % line[(pos + 2):]
+                match = re.search(usb_no_name_regex, card_name)
+
+                if match != None:
+                    dictionary = match.groupdict()
+                    prefix = dictionary['prefix']
+                    vendor_id = int(float.fromhex('0x' + dictionary['vendor_id']))
+                    device_id = int(float.fromhex('0x' + dictionary['device_id']))
+
+                    card_name = prefix + usb_find_fullname(device_id, vendor_id)
 
                 names.append(card_name)
 
