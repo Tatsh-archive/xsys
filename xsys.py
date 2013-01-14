@@ -26,7 +26,9 @@ __module_description__ = "X-Sys replacement in Python"
 
 
 def wrap(word, string):
-    return u'' + word + u'[' + string + u']'
+    return (u'' + word + u'[' + string + u']').encode(
+        'utf-8',
+        errors='replace')
 
 PCI_CLASS_NETWORK_ETHERNET = 0x0200
 PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
@@ -324,6 +326,8 @@ def ether(word, word_eol, userdata):
     if output:
         dest = xchat.get_context()
         dest.command('say %s' % wrap('ether', output))
+    else:
+        xchat.prnt('No ethernet devices found')
 
     return xchat.EAT_ALL
 
@@ -389,7 +393,7 @@ def sound(word, word_eol, userdata):
     if output:
         dest.command('say %s' % wrap('sound', output))
     else:
-        dest.command('say %s' % wrap('sound', 'No sound cards found'))
+        xchat.prnt('No sound cards found')
 
     return xchat.EAT_ALL
 
@@ -536,6 +540,8 @@ def uptime(word, word_eol, userdata):
     if output:
         dest = xchat.get_context()
         dest.command('say %s' % wrap('uptime', output))
+    else:
+        xchat.prnt('Could not get uptime')
 
     return xchat.EAT_ALL
 
@@ -703,9 +709,7 @@ def now_playing_cb(word, word_eol, userdata):
                 pass
 
             try:
-                output = ('say %s' % wrap('np', format_str % args)).encode(
-                    'utf-8',
-                    errors='replace')
+                output = 'say %s' % wrap('np', format_str % args)
                 dest.command(output)
             except:
                 # print sys.exc_info()
@@ -713,11 +717,122 @@ def now_playing_cb(word, word_eol, userdata):
 
             return xchat.EAT_ALL
         except:
-            print sys.exc_info()
+            # print sys.exc_info()
             pass
 
-    xchat.prnt('You do not have a supported player running or it is currently'
+    xchat.prnt('You do not have a supported player running or it is currently '
                'not playing a file')
+
+    return xchat.EAT_ALL
+
+
+def sysinfo_hwmon():
+    def parse_nvidia_gpu_core_temp():
+        command_line = ('nvidia-settings -q GPUCoreTemp |'
+                        'grep Attribute |'
+                        'awk "{ print \$4 }"')
+        return int(sp.check_output(command_line, shell=True).strip('.\n'))
+
+    def parse_mobo_and_cpu_temp_lm_sensors():
+        lines = sp.check_output('sensors', shell=True).strip().split('\n')
+        i = 0
+        j = 0
+        length = len(lines)
+        info = {}
+
+        while i < length:
+            if lines[i].strip() == '':
+                i += 1
+                continue
+
+            device_name = lines[i].strip()
+
+            i += 1
+            adapter_name = lines[i].strip()[9:]
+
+            info[device_name] = {
+                'adapter_type': adapter_name,
+                'temps': []
+            }
+
+            j = i
+            while j < length:
+                if lines[j].strip() == '':
+                    j += 1
+                    break
+
+                regex = '^temp(?P<index>\d)\:\s+(?P<temp>[\+\-]\d+\.\d+°C)(?' +
+                ':\s+\(.*\)\s+sensor\s+\=\s+(?P<sensor>\w+))?'
+
+                matches = re.search(regex, lines[j])
+
+                if matches is not None:
+                    dictionary = matches.groupdict()
+                    sensor = dictionary['sensor']
+
+                    if sensor == 'disabled':
+                        j += 1
+                        continue
+
+                    info[device_name]['temps'].append(
+                        dictionary['temp'].lstrip('+'))
+
+                j += 1
+
+            i = j
+
+        return info
+
+    gpu_temp = None
+    lm_sensors_info = None
+
+    try:
+        gpu_temp = parse_nvidia_gpu_core_temp()
+    except:
+        pass
+
+    try:
+        lm_sensors_info = parse_mobo_and_cpu_temp_lm_sensors()
+    except:
+        print sys.exc_info()
+        pass
+
+    return [lm_sensors_info, gpu_temp]
+
+
+def hwmon(word, word_eol, userdata):
+    lm_sensors_info, gpu_temp = sysinfo_hwmon()
+    output = []
+
+    if lm_sensors_info is None and gpu_temp is None:
+        xchat.prnt('No monitoring sensors detected')
+        return xchat.EAT_ALL
+
+    if gpu_temp is not None:
+        output.append(u'gpu:: temp0: %d\xb0C' % gpu_temp)
+
+    if lm_sensors_info is not None:
+        for device_name in lm_sensors_info:
+            temps = lm_sensors_info[device_name]['temps']
+            temp_output = []
+            i = 0
+
+            if len(temps):
+                for temp in temps:
+                    add = ('temp%d: %s' % (i, temp)).decode('utf-8')
+                    temp_output.append(add)
+                    i += 1
+
+                output.append(device_name + ':: ' + ', '.join(temp_output))
+
+    output = '; '.join(output)
+
+    if output:
+        dest = xchat.get_context()
+        output = 'say %s' % wrap('sensor', output)
+        dest.command(output)
+    else:
+        xchat.prnt('No monitoring sensors detected')
 
     return xchat.EAT_ALL
 
@@ -739,7 +854,7 @@ xchat.hook_command('meminfo', meminfo)
 xchat.hook_command('video', video)
 xchat.hook_command('ether', ether)
 xchat.hook_command('distro', distro)
-# xchat.hook_command('hwmon', hwmon) # TODO Maybe
+xchat.hook_command('hwmon', hwmon)
 
 if has_dbus:
     xchat.hook_command('np', now_playing_cb)
