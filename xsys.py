@@ -31,11 +31,14 @@ def wrap(word, string):
         errors='replace')
 
 PCI_CLASS_NETWORK_ETHERNET = 0x0200
+PCI_CLASS_NETWORK_ETHERNET_WIFI = 0x0280 # Correct?
 PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
 PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
+PCI_CLASS_DISPLAY = 0x0300
 
 # http://en.wikipedia.org/wiki/Universal_Serial_Bus#Device_classes
 USB_CLASS_NETWORK = 0x02
+USB_CLASS_NETWORK_APPLE = 0xff # USB adapter from Apple, and Bluetooth internal (which is via USB)
 USB_CLASS_INTERFACE_NETWORK = 0x09
 USB_CLASS_BLUETOOTH = 0xe0
 
@@ -56,6 +59,17 @@ def parse_pci_path_ids(path):
 
     return [device_id, vendor_id]
 
+def parse_usb_path_ids(path):
+    device_file = os.path.join(path, 'idProduct')
+    vendor_file = os.path.join(path, 'idVendor')
+    finput = fileinput.input([device_file, vendor_file])
+
+    device_id = int(float.fromhex('0x' + finput[0].strip('\n')))
+    vendor_id = int(float.fromhex('0x' + finput[1].strip('\n')))
+
+    fileinput.close()
+
+    return [device_id, vendor_id]
 
 def pci_find_by_class(class_id):
     devices_path = '/sys/bus/pci/devices'
@@ -76,6 +90,28 @@ def pci_find_by_class(class_id):
 
             if dev_class_id == class_id:
                 devices.append(parse_pci_path_ids(path))
+
+    return devices
+
+def usb_find_by_class(class_id):
+    devices_path = '/sys/bus/usb/devices'
+    devices = []
+
+    if os.path.exists(devices_path) is False:
+        raise EnvironmentError('Path "%s" must exist' % devices_path)
+
+    for name in os.listdir(devices_path):
+        path = os.path.join(devices_path, name)
+        class_file = os.path.join(path, 'bDeviceClass')
+
+        if os.path.isdir(path) \
+                and os.path.isfile(class_file):  # Only top-level
+            hex_value = '0x' + fileinput.input([class_file])[0]
+            dev_class_id = float.fromhex(hex_value)
+            fileinput.close()
+
+            if dev_class_id == class_id:
+                devices.append(parse_usb_path_ids(path))
 
     return devices
 
@@ -273,26 +309,40 @@ def diskinfo(word, word_eol, userdata):
 
 # TODO Support other video cards
 def sysinfo_video():
-    nvidia_file = '/proc/driver/nvidia/gpus/0/information'
-    output = ''
-    model = ''
-    bus_type = ''
+    def parse_nvidia():
+        nvidia_file = '/proc/driver/nvidia/gpus/0/information'
+        output = ''
+        model = ''
+        bus_type = ''
 
-    if os.path.exists(nvidia_file):
-        for line in fileinput.input([nvidia_file]):
-            fields = filter(remove_empty_strings, line.split(' '))
+        if os.path.exists(nvidia_file):
+            for line in fileinput.input([nvidia_file]):
+                fields = filter(remove_empty_strings, line.split(' '))
 
-            if fields[0] == 'Model:':
-                model = ' '.join(fields[1:])
-            elif fields[0] == 'Bus' and fields[1] == 'Type:':
-                bus_type = ' '.join(fields[2:])
+                if fields[0] == 'Model:':
+                    model = ' '.join(fields[1:])
+                elif fields[0] == 'Bus' and fields[1] == 'Type:':
+                    bus_type = ' '.join(fields[2:])
 
-    if model:
-        output = '%s' % (model)
-        if bus_type:
-            output += ' on %s bus' % (bus_type)
+        if model:
+            output = '%s' % (model)
+            if bus_type:
+                output += ' on %s bus' % (bus_type)
 
-    output = output.replace('\n', '')
+        return output
+
+    def parse_pci():
+        devices = pci_find_by_class(PCI_CLASS_DISPLAY)
+        names = []
+
+        for device_id, vendor_id in devices:
+            names.append(pci_find_fullname(device_id, vendor_id))
+
+        return names
+
+
+    output = filter(remove_empty_strings, [parse_nvidia()] + parse_pci())
+    output = ', '.join(output).replace('\n', '')
 
     return output
 
@@ -313,10 +363,17 @@ def ether(word, word_eol, userdata):
     # TODO USB devices and Bluetooth
     def get_ethernet_devices():
         devices = pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET)
+        devices += pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET_WIFI)
+        usb_devices = usb_find_by_class(USB_CLASS_NETWORK)
+        usb_devices += usb_find_by_class(USB_CLASS_NETWORK_APPLE)
+        usb_devices += usb_find_by_class(USB_CLASS_BLUETOOTH)
         names = []
 
         for device_id, vendor_id in devices:
             names.append(pci_find_fullname(device_id, vendor_id))
+
+        for device_id, vendor_id in usb_devices:
+            names.append(usb_find_fullname(device_id, vendor_id))
 
         return names
 
