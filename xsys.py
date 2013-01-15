@@ -225,17 +225,17 @@ def sysinfo_diskinfo():
         while total_space > 1023 and i < 7:
             i += 1
             bytesize = quantities[i]
-            free_space /= 1024
-            total_space /= 1024
+            free_space /= 1024.0
+            total_space /= 1024.0
 
         if percentages:
-            result = '%s: %.1f %s, %.1f%% free' % (
+            result = '%s: %.2f %s, %.1f%% free' % (
                 desc,
                 total_space,
                 bytesize,
                 percentage(free_k, total_k))
         else:
-            result = '%s: %.1f %s/%.1f %s free' % (
+            result = '%s: %.2f %s/%.2f %s free' % (
                 desc,
                 free_space,
                 bytesize,
@@ -250,7 +250,7 @@ def sysinfo_diskinfo():
 
     for line in lines:
         try:
-            if line.find('/dev/loop') != -1 or line.find('/dev/root') != -1:
+            if line.find('/dev/loop') != -1:
                 continue
 
             if line[0].isalpha():
