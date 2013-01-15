@@ -248,9 +248,9 @@ def sysinfo_diskinfo():
             result = free * 1000 / total
             return result / 10.0
 
-        i = -1
+        i = 0
         bytesize = 'B'
-        quantities = ['KiB', 'MiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+        quantities = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
         result = ''
         free_space = free_k
         total_space = total_k
@@ -258,7 +258,7 @@ def sysinfo_diskinfo():
         if total_k == 0:
             return '%s: none' % desc
 
-        while total_space > 1023 and i < 7:
+        while total_space > 1023 and i < 8:
             i += 1
             bytesize = quantities[i]
             free_space /= 1024.0
