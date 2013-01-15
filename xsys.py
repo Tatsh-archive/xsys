@@ -728,7 +728,7 @@ def now_playing_cb(word, word_eol, userdata):
 
 def sysinfo_hwmon():
     def parse_nvidia_gpu_core_temp():
-        command_line = ('nvidia-settings -q GPUCoreTemp |'
+        command_line = ('nvidia-settings -q GPUCoreTemp 2>&1 |'
                         'grep Attribute |'
                         'awk "{ print \$4 }"')
         return int(sp.check_output(command_line, shell=True).strip('.\n'))
