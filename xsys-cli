@@ -5,6 +5,7 @@
 
 from ast import *
 
+
 class replaceXchatCalls(NodeTransformer):
     _remove = [
         'hook_command',
@@ -42,52 +43,64 @@ class replaceXchatCalls(NodeTransformer):
         for tnode in node.targets:
             if isinstance(tnode, Name) and isinstance(node.value, Call):
                 attr = getattr(node.value, 'func', None)
-                if isinstance(attr, Attribute) and getattr(attr.value, 'id', None) == 'xchat':
-                        if getattr(self._variables, attr.attr, False) is False:
-                            self._variables[attr.attr] = []
+                if isinstance(attr, Attribute) and \
+                        getattr(attr.value, 'id', None) == 'xchat':
+                    if getattr(self._variables, attr.attr, False) is False:
+                        self._variables[attr.attr] = []
 
-                        self._variables[attr.attr].append(tnode.id)
-                        print '%d Removing assignment "%s = xchat.%s()"' % (tnode.lineno, tnode.id, attr.attr)
-                        return None
+                    self._variables[attr.attr].append(tnode.id)
+                    print '%d Removing assignment "%s = xchat.%s()"' %
+                    (tnode.lineno, tnode.id, attr.attr)
+                    return None
         return node
 
     def visit_Return(self, node):
         """ Remove/replace all xchat.* return statements """
 
-        if isinstance(node.value, Attribute) and node.value.value.id == 'xchat':
+        if isinstance(node.value, Attribute) and \
+                node.value.value.id == 'xchat':
             if node.col_offset == self.NORMAL_RETURN_XCHAT_OFFSET:
-                print '%d Removing "return xchat.%s"' % (node.value.lineno, node.value.attr)
+                print '%d Removing "return xchat.%s"' %
+                (node.value.lineno, node.value.attr)
                 return None
 
-            print '%d Replacing "return.%s" with "return"' % (node.value.lineno, node.value.attr)
+            print ('%d Replacing "return.%s" with "return"' %
+                  (node.value.lineno, node.value.attr))
             return copy_location(Return(value=None), node)
         return node
 
     def visit_Expr(self, node):
         if isinstance(node.value, Call):
             if hasattr(node.value.func, 'attr') \
-                and node.value.func.attr in self._replace_with_print:
-                print '%d Replacing "%s.%s()" call with regular print' % (node.value.func.lineno, node.value.func.value.id, node.value.func.attr)
+                    and node.value.func.attr in self._replace_with_print:
+                print ('%d Replacing "%s.%s()" call with regular print' %
+                      (node.value.func.lineno, node.value.func.value.id,
+                       node.value.func.attr))
                 return copy_location(Print(
                     dest=None,
                     values=node.value.args,
                     nl=True
                 ), node)
             elif hasattr(node.value.func, 'attr') \
-                and node.value.func.attr in self._remove:
+                    and node.value.func.attr in self._remove:
                 func = node.value.func
 
-                print '%d Removing "xchat.%s()" call' % (func.lineno, func.attr)
+                print '%d Removing "xchat.%s()" call' %
+                (func.lineno, func.attr)
                 special_arg = Num(n=0)
                 if node.value.args[1].id.startswith('net'):
-                    special_arg = List(elts=[Str(s=''), Str(s='eth0')], ctx=Load())
+                    special_arg = List(elts=[
+                        Str(s=''),
+                        Str(s='eth0')],
+                        ctx=Load())
 
                 arguments = [special_arg, Num(n=0), Num(n=0)]
 
                 return copy_location(Expr(value=Call(func=Name(
                     id=node.value.args[1].id,
                     ctx=Load()
-                ), args=arguments, keywords=[], starargs=None, kwargs=None)), node)
+                ), args=arguments,
+                    keywords=[], starargs=None, kwargs=None)), node)
         return node
 
 with open('./xsys.py') as f:

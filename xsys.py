@@ -31,16 +31,16 @@ def wrap(word, string):
         errors='replace')
 
 PCI_CLASS_NETWORK_ETHERNET = 0x0200
-PCI_CLASS_NETWORK_ETHERNET_WIFI = 0x0280 # Correct?
+PCI_CLASS_NETWORK_ETHERNET_WIFI = 0x0280  # Correct?
 PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
 PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
 PCI_CLASS_DISPLAY = 0x0300
 
 # http://en.wikipedia.org/wiki/Universal_Serial_Bus#Device_classes
 USB_CLASS_NETWORK = 0x02
-USB_CLASS_NETWORK_APPLE = 0xff # USB adapter from Apple, and Bluetooth internal (which is via USB)
-USB_CLASS_INTERFACE_NETWORK = 0x09
 USB_CLASS_BLUETOOTH = 0xe0
+# USB adapter from Apple, and Bluetooth internal (which is via USB)
+USB_CLASS_NETWORK_APPLE = 0xff
 
 # TODO Setting by /percentages command
 percentages = False
@@ -59,6 +59,7 @@ def parse_pci_path_ids(path):
 
     return [device_id, vendor_id]
 
+
 def parse_usb_path_ids(path):
     device_file = os.path.join(path, 'idProduct')
     vendor_file = os.path.join(path, 'idVendor')
@@ -70,6 +71,7 @@ def parse_usb_path_ids(path):
     fileinput.close()
 
     return [device_id, vendor_id]
+
 
 def pci_find_by_class(class_id):
     devices_path = '/sys/bus/pci/devices'
@@ -92,6 +94,7 @@ def pci_find_by_class(class_id):
                 devices.append(parse_pci_path_ids(path))
 
     return devices
+
 
 def usb_find_by_class(class_id):
     devices_path = '/sys/bus/usb/devices'
@@ -339,7 +342,6 @@ def sysinfo_video():
             names.append(pci_find_fullname(device_id, vendor_id))
 
         return names
-
 
     output = filter(remove_empty_strings, [parse_nvidia()] + parse_pci())
     output = ', '.join(output).replace('\n', '')
@@ -818,8 +820,9 @@ def sysinfo_hwmon():
                     j += 1
                     break
 
-                regex = ('^(temp|Core\s?)(?P<index>\d)\:\s+(?P<temp>[\+\-]\d+\.\d+°C)(?' +
-                ':\s+\(.*\)\s+sensor\s+\=\s+(?P<sensor>\w+))?')
+                regex = ('^(temp|Core\s?)' +
+                         '(?P<index>\d)\:\s+(?P<temp>[\+\-]\d+\.\d+°C)(?' +
+                         ':\s+\(.*\)\s+sensor\s+\=\s+(?P<sensor>\w+))?')
 
                 matches = re.search(regex, lines[j])
 
