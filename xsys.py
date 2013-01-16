@@ -24,12 +24,6 @@ __module_name__ = "X-Sys Modernised"
 __module_version__ = "0.1"
 __module_description__ = "X-Sys replacement in Python"
 
-
-def wrap(word, string):
-    return (u'' + word + u'[' + string + u']').encode(
-        'utf-8',
-        errors='replace')
-
 PCI_CLASS_NETWORK_ETHERNET = 0x0200
 PCI_CLASS_NETWORK_ETHERNET_WIFI = 0x0280  # Correct?
 PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
@@ -40,10 +34,18 @@ PCI_CLASS_DISPLAY = 0x0300
 USB_CLASS_NETWORK = 0x02
 USB_CLASS_BLUETOOTH = 0xe0
 # USB adapter from Apple, and Bluetooth internal (which is via USB)
-USB_CLASS_NETWORK_APPLE = 0xff
+# Technically this is for all other devices
+# The iPhone with Hotspot support also falls under this class
+USB_CLASS_NETWORK_GENERIC = 0xff
 
 # TODO Setting by /percentages command
 percentages = False
+
+
+def wrap(word, string):
+    return (u'' + word + u'[' + string + u']').encode(
+        'utf-8',
+        errors='replace')
 
 
 # Only for Linux at the moment
@@ -367,7 +369,7 @@ def ether(word, word_eol, userdata):
         devices = pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET)
         devices += pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET_WIFI)
         usb_devices = usb_find_by_class(USB_CLASS_NETWORK)
-        usb_devices += usb_find_by_class(USB_CLASS_NETWORK_APPLE)
+        usb_devices += usb_find_by_class(USB_CLASS_NETWORK_GENERIC)
         usb_devices += usb_find_by_class(USB_CLASS_BLUETOOTH)
         names = []
 
