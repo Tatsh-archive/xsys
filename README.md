@@ -8,6 +8,16 @@ Currently this script only supports Linux.
 
 Copy `xsys.py` to `~/.xchat2`.
 
+# Hacking
+
+The only commands not implemented are those that store settings: `/xsys2format`, `/playing` (for configuring how the `/np` command should output; colours, etc), `/percentages` (if percentages should be used instead of totals for memory and disk space), and `/npaction`.
+
+For easy testing (instead of having to manually load and unload into X-Chat 2 again and again), test the script using in the command line using `./xsys-cli`. It is only for Python 2. If you have Python 2 and 3 installed (as might be the case on Gentoo), you will probably need to type something similar to `python2 xsys-cli`.
+
+If you modify the `/np` command, make sure to test it with non-ASCII titled songs (test any UTF-8 encoded text) in X-Chat 2 (not just in the command line). If anything fails, it is probably because `xchat.command()` is expecting a byte string. As such, you may need to `encode()` ([Unicode HOWTO](http://docs.python.org/2/howto/unicode.html)) the string in all stages prior to calling `xchat.command()`.
+
+If you want to send a pull request, check all Python files and fix them to be PEP 8 conformant before doing so.
+
 # Commands
 
 - `/sysinfo` General system information (a combination of several commands)
@@ -28,7 +38,6 @@ Copy `xsys.py` to `~/.xchat2`.
 # Limitations
 
 - `/sound` only works with PCI if the system is not using ALSA
-- `/video` only supports the binary nVidia driver for the moment. Only supports one GPU.
-- `/ether` only supports PCI-based ethernet cards
+- `/video` For binary drivers, only supports the nVidia driver. Otherwise reads PCI data generically and does not determine the slot type.
 - `/distro` relies upon the `/etc/lsb_release` or `/etc/lsb-release` file existing. If that does not exist, the command only checks for the following distros: Gentoo, RedHat, Slackware, Mandrake, Debian, SuSE, TurboLinux
-- `/hwmon` only supports the binary nVidia driver to get the current GPU temperature. Only supports 1 GPU.
+- `/hwmon` only supports the binary nVidia driver to get the current GPU temperature. Only supports 1 GPU. Requires lm_sensors and uses a regular expression that may need to be modified or an alternate way to parse the output may be necessary.
