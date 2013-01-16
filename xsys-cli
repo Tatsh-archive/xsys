@@ -50,7 +50,7 @@ class replaceXchatCalls(NodeTransformer):
 
                     self._variables[attr.attr].append(tnode.id)
                     print '%d Removing assignment "%s = xchat.%s()"' % \
-                    (tnode.lineno, tnode.id, attr.attr)
+                        (tnode.lineno, tnode.id, attr.attr)
                     return None
         return node
 
@@ -60,11 +60,11 @@ class replaceXchatCalls(NodeTransformer):
         if isinstance(node.value, Attribute) and \
                 node.value.value.id == 'xchat':
             if node.col_offset == self.NORMAL_RETURN_XCHAT_OFFSET:
-                print '%d Removing "return xchat.%s"' % \
-                (node.value.lineno, node.value.attr)
+                print ('%d Removing "return xchat.%s"' %
+                      (node.value.lineno, node.value.attr))
                 return None
 
-            print ('%d Replacing "return.%s" with "return"' % \
+            print ('%d Replacing "return.%s" with "return"' %
                   (node.value.lineno, node.value.attr))
             return copy_location(Return(value=None), node)
         return node
@@ -86,7 +86,7 @@ class replaceXchatCalls(NodeTransformer):
                 func = node.value.func
 
                 print '%d Removing "xchat.%s()" call' % \
-                (func.lineno, func.attr)
+                      (func.lineno, func.attr)
                 special_arg = Num(n=0)
                 if node.value.args[1].id.startswith('net'):
                     special_arg = List(elts=[
