@@ -312,7 +312,8 @@ def diskinfo(word, word_eol, userdata):
     return xchat.EAT_ALL
 
 
-# TODO Support other video cards
+# TODO Support getting slot type for other video cards (most likely
+#   proprietary only)
 def sysinfo_video():
     def parse_nvidia():
         nvidia_file = '/proc/driver/nvidia/gpus/0/information'
@@ -364,7 +365,7 @@ def video(word, word_eol, userdata):
 
 
 def ether(word, word_eol, userdata):
-    # TODO USB devices and Bluetooth
+    # TODO Add iPhone hotspot (find ipheth)
     def get_ethernet_devices():
         devices = pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET)
         devices += pci_find_by_class(PCI_CLASS_NETWORK_ETHERNET_WIFI)
