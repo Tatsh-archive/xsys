@@ -315,6 +315,8 @@ def diskinfo(word, word_eol, userdata):
 # TODO Support getting slot type for other video cards (most likely
 #   proprietary only)
 def sysinfo_video():
+    has_nvidia_proprietary = False
+
     def parse_nvidia():
         nvidia_file = '/proc/driver/nvidia/gpus/0/information'
         output = ''
@@ -335,18 +337,27 @@ def sysinfo_video():
             if bus_type:
                 output += ' on %s bus' % (bus_type)
 
+        has_nvidia_proprietary = True
+
         return output
 
     def parse_pci():
         devices = pci_find_by_class(PCI_CLASS_DISPLAY)
         names = []
+        nvidia_vendor_id = 0x10de
 
         for device_id, vendor_id in devices:
+            if has_nvidia_proprietary and vendor_id == nvidia_vendor_id:
+                continue
+
             names.append(pci_find_fullname(device_id, vendor_id))
 
         return names
 
-    output = filter(remove_empty_strings, [parse_nvidia()] + parse_pci())
+    nvidia_output = parse_nvidia()
+    has_nvidia_proprietary = nvidia_output != ''
+
+    output = filter(remove_empty_strings, [nvidia_output] + parse_pci())
     output = ', '.join(output).replace('\n', '')
 
     return output
