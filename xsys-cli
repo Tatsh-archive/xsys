@@ -5,6 +5,24 @@
 
 from ast import *
 
+# Detect Python that is not version 2 and try to use python2
+import sys
+import subprocess as sp
+import inspect
+from os import path
+
+if sys.version_info.major != 2:
+    python_2_path = str(sp.check_output('which python2', shell=True))
+    python_2_path = python_2_path[2:-3]
+    this_script = path.abspath(inspect.getfile(inspect.currentframe()))
+    try:
+        sp.call([python_2_path, this_script])
+    except OSError:
+        print('Unable to find Python 2. This script requires Python 2 to run')
+        sys.exit(1)
+
+    sys.exit(0)
+
 
 class replaceXchatCalls(NodeTransformer):
     _remove = [
@@ -32,7 +50,7 @@ class replaceXchatCalls(NodeTransformer):
 
         for alias in node.names:
             if alias.name == 'xchat':
-                print 'Removing "import xchat"'
+                print('Removing "import xchat"')
                 return None
 
         return node
@@ -49,7 +67,7 @@ class replaceXchatCalls(NodeTransformer):
                         self._variables[attr.attr] = []
 
                     self._variables[attr.attr].append(tnode.id)
-                    print '%d Removing assignment "%s = xchat.%s()"' % \
+                    print('%d Removing assignment "%s = xchat.%s()"') % \
                         (tnode.lineno, tnode.id, attr.attr)
                     return None
         return node
@@ -60,11 +78,11 @@ class replaceXchatCalls(NodeTransformer):
         if isinstance(node.value, Attribute) and \
                 node.value.value.id == 'xchat':
             if node.col_offset == self.NORMAL_RETURN_XCHAT_OFFSET:
-                print ('%d Removing "return xchat.%s"' %
+                print('%d Removing "return xchat.%s"' %
                       (node.value.lineno, node.value.attr))
                 return None
 
-            print ('%d Replacing "return.%s" with "return"' %
+            print('%d Replacing "return.%s" with "return"' %
                   (node.value.lineno, node.value.attr))
             return copy_location(Return(value=None), node)
         return node
@@ -73,7 +91,7 @@ class replaceXchatCalls(NodeTransformer):
         if isinstance(node.value, Call):
             if hasattr(node.value.func, 'attr') \
                     and node.value.func.attr in self._replace_with_print:
-                print ('%d Replacing "%s.%s()" call with regular print' %
+                print('%d Replacing "%s.%s()" call with regular print' %
                       (node.value.func.lineno, node.value.func.value.id,
                        node.value.func.attr))
                 return copy_location(Print(
@@ -85,8 +103,8 @@ class replaceXchatCalls(NodeTransformer):
                     and node.value.func.attr in self._remove:
                 func = node.value.func
 
-                print '%d Removing "xchat.%s()" call' % \
-                      (func.lineno, func.attr)
+                print('%d Removing "xchat.%s()" call') % \
+                     (func.lineno, func.attr)
                 special_arg = Num(n=0)
                 if node.value.args[1].id.startswith('net'):
                     special_arg = List(elts=[
@@ -107,5 +125,5 @@ with open('./xsys.py') as f:
     top_node = parse(''.join(f))
     ast = replaceXchatCalls().visit(top_node)
     ast = fix_missing_locations(ast)
-    print ''
+    print('')
     eval(compile(ast, '<string>', 'exec'))
