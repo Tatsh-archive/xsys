@@ -709,6 +709,7 @@ def parse_distro():
         ['/etc/debian_version', lambda f: 'Debian %s' % f[0]],
         ['/etc/SuSE-release', get_first_line_of_file],
         ['/etc/turbolinux-release', get_first_line_of_file],
+        ['/etc/sabayon-release',get_first_line_of_file],
     ]
 
     for release_file_name, parser_callback in files_to_parser_functions:
