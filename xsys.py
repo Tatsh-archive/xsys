@@ -16,6 +16,7 @@ has_dbus = False
 
 try:
     import dbus
+    dbus.SessionBus()
     has_dbus = True
 except:
     pass
