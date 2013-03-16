@@ -22,7 +22,7 @@ except:
     pass
 
 __module_name__ = "X-Sys Modernised"
-__module_version__ = "0.1"
+__module_version__ = "1.0"
 __module_description__ = "X-Sys replacement in Python"
 
 PCI_CLASS_NETWORK_ETHERNET = 0x0200
