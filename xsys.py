@@ -187,6 +187,9 @@ def sysinfo_cpuinfo():
 
     info = parse_cpu_info()
     cpu_model = platform.processor()
+    # Stupid Intel Core i7 CPU shows the speed at the end
+    # 'Intel(R) Core(TM) i7-2677M CPU @ 1.80GHz'
+    cpu_model = re.sub('\sCPU\s@\s\d\.\d+GHz$', '', cpu_model)
     ghz = info['freq'] > 1000
     output = '%d x %s (%s) @ ' % (info['count'], cpu_model, info['vendor'])
 
