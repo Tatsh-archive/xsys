@@ -248,7 +248,7 @@ def meminfo(word, word_eol, userdata):
 
 
 def sysinfo_diskinfo():
-    def pretty_freespace(desc, free_k, total_k):
+    def pretty_freespace(free_k, total_k):
         def percentage(free, total):
             result = free * 1000 / total
             return result / 10.0
@@ -270,14 +270,12 @@ def sysinfo_diskinfo():
             total_space /= 1024.0
 
         if percentages:
-            result = '%s: %.2f %s, %.1f%% free' % (
-                desc,
+            result = '%.2f %s, %.1f%% total space free' % (
                 total_space,
                 bytesize,
                 percentage(free_k, total_k))
         else:
-            result = '%s: %.2f %s/%.2f %s free' % (
-                desc,
+            result = '%.2f %s used / %.2f %s total' % (
                 free_space,
                 bytesize,
                 total_space,
@@ -303,7 +301,7 @@ def sysinfo_diskinfo():
         total_k += long(parts[1])
         free_k += long(parts[2])
 
-    return pretty_freespace('Total', free_k, total_k)
+    return pretty_freespace(free_k, total_k)
 
 
 def diskinfo(word, word_eol, userdata):
