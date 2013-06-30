@@ -30,6 +30,7 @@ PCI_CLASS_NETWORK_ETHERNET_WIFI = 0x0280  # Correct?
 PCI_CLASS_MULTIMEDIA_AUDIO_ALT = 0x0401
 PCI_CLASS_MULTIMEDIA_AUDIO = 0x0403
 PCI_CLASS_DISPLAY = 0x0300
+PCI_CLASS_BLUETOOTH = 0x1100
 
 # http://en.wikipedia.org/wiki/Universal_Serial_Bus#Device_classes
 USB_CLASS_NETWORK = 0x02
@@ -913,6 +914,28 @@ def hwmon(word, word_eol, userdata):
     return xchat.EAT_ALL
 
 
+def btinfo(word, word_eol, userdata):
+    pci_devices = pci_find_by_class(PCI_CLASS_BLUETOOTH)
+    usb_devices = usb_find_by_class(USB_CLASS_BLUETOOTH)
+    ret = []
+
+    for (vendor_id, product_id) in pci_devices:
+        ret.append(pci_find_fullname(vendor_id, product_id))
+
+    for (vendor_id, product_id) in usb_devices:
+        ret.append(usb_find_fullname(vendor_id, product_id))
+
+    if len(ret):
+        output  = ','.join(ret)
+        dest = xchat.get_context()
+        output = 'say %s' % wrap('bluetooth', output)
+        dest.command(output)
+    else:
+        xchat.prnt('No bluetooth devices detected')
+
+    return xchat.EAT_ALL
+
+
 # xchat.hook_command('xsys2format', xsys2format)
 # xchat.hook_command('playing', playing)
 # xchat.hook_command('percentages', percentages)
@@ -931,6 +954,7 @@ xchat.hook_command('video', video)
 xchat.hook_command('ether', ether)
 xchat.hook_command('distro', distro)
 xchat.hook_command('hwmon', hwmon)
+xchat.hook_command('bt', btinfo)
 
 if has_dbus:
     xchat.hook_command('np', now_playing_cb)
