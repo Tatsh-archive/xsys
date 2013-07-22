@@ -4,6 +4,12 @@ System information script for X-Chat. The old X-Sys plugin (in C) is no longer s
 
 # Installation
 
+## HexChat
+
+Copy `xsys.py` to `~/.config/hexchat`.
+
+## X-Chat
+
 Copy `xsys.py` to `~/.xchat2`.
 
 # Hacking
