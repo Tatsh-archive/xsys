@@ -173,7 +173,7 @@ def sysinfo_cpuinfo():
             return_value = {'freq': freq, 'vendor': vendor, 'count': 1}
 
             speed_output = sp.check_output(
-                'cat /proc/cpuinfo | grep cpu\ MHz', shell=True).split("\n")
+                'cat /proc/cpuinfo 2>/dev/null | grep cpu\ MHz', shell=True).split("\n")
             vendor = sp.check_output('uname -i', shell=True).split("\n")[0]
 
             return_value['vendor'] = vendor
@@ -182,6 +182,8 @@ def sysinfo_cpuinfo():
             return_value['freq'] = float(speed)
             return_value['count'] = multiplier
         except CalledProcessError:
+            # OS X
+            # $ system_profiler 2>&1 | grep -A 3 'Processor Name'
             pass
         finally:
             return return_value
@@ -210,32 +212,51 @@ def cpuinfo(word, word_eol, userdata):
 
 
 def sysinfo_meminfo():
-    lines = sp.check_output(
-        'cat /proc/meminfo | grep -E "^Mem(Total|Free)|^Cached"',
-        shell=True
-    ).split("\n")
+    def os_x_meminfo():
+        # http://stackoverflow.com/a/467726
+        lines = sp.check_output('vm_stat', shell=True).split('\n')
+        page_size_bytes = int(re.sub('\sbytes\)$', '', lines[0].replace('Mach Virtual Memory Statistics: (page size of ', '')))
+        result = {}
+
+        pages_free_bytes = int(re.split(':\s+', lines[1])[1].replace('.', '')) * page_size_bytes
+
+        return [
+            pages_free_bytes / 1024,  # free_kb
+            0,  # cached_kb
+            0   # total_kb
+        ]
+
+
     total_kb = None
     free_kb = None
     cached_kb = None
 
-    for line in lines:
-        parts = line.split(':')
+    try:
+        lines = sp.check_output(
+            'cat /proc/meminfo 2>/dev/null | grep -E "^Mem(Total|Free)|^Cached"',
+            shell=True
+        ).split("\n")
 
-        if len(parts) != 2:
-            continue
+        for line in lines:
+            parts = line.split(':')
 
-        value = long(parts[1].strip().split(' ')[0], 10)
-        if parts[0] == 'MemTotal':
-            total_kb = value
-        elif parts[0] == 'MemFree':
-            free_kb = value
-        elif parts[0] == 'Cached':
-            cached_kb = value
+            if len(parts) != 2:
+                continue
 
-        if total_kb is not None \
-            and free_kb is not None \
-                and cached_kb is not None:
-            break
+            value = long(parts[1].strip().split(' ')[0], 10)
+            if parts[0] == 'MemTotal':
+                total_kb = value
+            elif parts[0] == 'MemFree':
+                free_kb = value
+            elif parts[0] == 'Cached':
+                cached_kb = value
+
+            if total_kb is not None \
+                and free_kb is not None \
+                    and cached_kb is not None:
+                break
+    except sp.CalledProcessError:
+        free_kb, cached_kb, total_kb = os_x_meminfo()
 
     free_mb = (free_kb / 1024) + (cached_kb / 1024)
     total_mb = total_kb / 1024
@@ -594,6 +615,7 @@ def uptime(word, word_eol, userdata):
     try:
         weeks, days, hours, minutes, seconds = parse_uptime()
     except:
+        # On OS X, use uptime command and parse before the 'up' keyword
         #print sys.exc_info()
         xchat.prnt('Error calling parse_uptime()')
         return xchat.EAT_ALL
@@ -624,6 +646,7 @@ def uptime(word, word_eol, userdata):
 def sysinfo_osinfo():
     kernel = '%s %s %s' % (
         platform.system(), platform.release(), platform.machine())
+    kernel = kernel.replace('Darwin', 'Mac OS X')  # TODO Get data from system_profiler
     return '%s@%s %s' % (os.environ['USER'], getfqdn(), kernel)
 
 
@@ -940,22 +963,22 @@ def btinfo(word, word_eol, userdata):
 # xchat.hook_command('playing', playing)
 # xchat.hook_command('percentages', percentages)
 # xchat.hook_command('npaction', npaction)
-xchat.hook_command('sysinfo', sysinfo)
+#xchat.hook_command('sysinfo', sysinfo)
 xchat.hook_command('xsys', xsys)
-xchat.hook_command('cpuinfo', cpuinfo)
-xchat.hook_command('sysuptime', uptime)
+#xchat.hook_command('cpuinfo', cpuinfo)
+#xchat.hook_command('sysuptime', uptime)
 xchat.hook_command('osinfo', osinfo)
-xchat.hook_command('sound', sound)
-xchat.hook_command('netdata', netdata)
-xchat.hook_command('netstream', netstream)
+#xchat.hook_command('sound', sound)
+#xchat.hook_command('netdata', netdata)
+#xchat.hook_command('netstream', netstream)
 xchat.hook_command('diskinfo', diskinfo)
-xchat.hook_command('meminfo', meminfo)
-xchat.hook_command('video', video)
-xchat.hook_command('ether', ether)
-xchat.hook_command('distro', distro)
-xchat.hook_command('hwmon', hwmon)
-xchat.hook_command('bt', btinfo)
+#xchat.hook_command('meminfo', meminfo)
+#xchat.hook_command('video', video)
+#xchat.hook_command('ether', ether)
+#xchat.hook_command('distro', distro)
+#xchat.hook_command('hwmon', hwmon)
+#xchat.hook_command('bt', btinfo)
 
-if has_dbus:
-    xchat.hook_command('np', now_playing_cb)
-    xchat.prnt('DBus is available. /np command is enabled')
+#if has_dbus:
+    #xchat.hook_command('np', now_playing_cb)
+    #xchat.prnt('DBus is available. /np command is enabled')
