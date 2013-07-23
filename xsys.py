@@ -655,10 +655,23 @@ def uptime(word, word_eol, userdata):
     try:
         weeks, days, hours, minutes, seconds = parse_uptime()
     except:
-        # On OS X, use uptime command and parse before the 'up' keyword
-        #print sys.exc_info()
-        xchat.prnt('Error calling parse_uptime()')
-        return xchat.EAT_ALL
+        if sys.platform == 'darwin':
+            # The kern.boottime value in human readable format
+            # It is the time of the boot up, not the length of the uptime
+            # Example: Jul 23 05:09:04 2013
+            kern_boot_time = ' '.join(sp.check_output('sysctl kern.boottime', shell=True).split(' ')[10:]).strip()
+
+            # TODO Find out if it really is %d or if it is without leading zero
+            # Same for hour
+            boot_time = datetime.datetime.strptime(kern_boot_time, '%b %d %H:%M:%S %Y')
+            seconds = (datetime.datetime.now() - boot_time).total_seconds()
+            minutes = (seconds / 60) % 60
+            hours = (seconds / 3600) % 24
+            days = (seconds / 86400) % 7
+            weeks = seconds / 604800
+        else:
+            xchat.prnt('Error calling parse_uptime()')
+            return xchat.EAT_ALL
 
     if minutes != 0 or hours != 0 or days != 0 or weeks != 0:
         if hours != 0 or days != 0 or weeks != 0:
@@ -1006,7 +1019,7 @@ def btinfo(word, word_eol, userdata):
 #xchat.hook_command('sysinfo', sysinfo)
 xchat.hook_command('xsys', xsys)
 xchat.hook_command('cpuinfo', cpuinfo)
-#xchat.hook_command('sysuptime', uptime)
+xchat.hook_command('sysuptime', uptime)
 xchat.hook_command('osinfo', osinfo)
 #xchat.hook_command('sound', sound)
 #xchat.hook_command('netdata', netdata)
