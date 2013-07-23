@@ -664,11 +664,12 @@ def uptime(word, word_eol, userdata):
             # TODO Find out if it really is %d or if it is without leading zero
             # Same for hour
             boot_time = datetime.datetime.strptime(kern_boot_time, '%b %d %H:%M:%S %Y')
-            seconds = (datetime.datetime.now() - boot_time).total_seconds()
-            minutes = (seconds / 60) % 60
-            hours = (seconds / 3600) % 24
-            days = (seconds / 86400) % 7
-            weeks = seconds / 604800
+            uptime = (datetime.datetime.now() - boot_time).total_seconds()
+            seconds = uptime % 60
+            minutes = (uptime / 60) % 60
+            hours = (uptime / 3600) % 24
+            days = (uptime / 86400) % 7
+            weeks = uptime / 604800
         else:
             xchat.prnt('Error calling parse_uptime()')
             return xchat.EAT_ALL
