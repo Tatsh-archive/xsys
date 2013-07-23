@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
 import xchat
 import platform
 import os
@@ -42,6 +43,24 @@ USB_CLASS_NETWORK_GENERIC = 0xff
 
 # TODO Setting by /percentages command
 percentages = False
+
+# For OS X, save the data from system_profiler because it is a noisy command
+# Save it to a file for the day so the command is only run once per day (takes about 5 seconds on my system to run)
+os_x_system_profiler = None
+if sys.platform == 'darwin':
+    today = str(datetime.date.today()).replace('-', '')
+
+    try:
+        with open('/tmp/system_profiler.%s' % (today)) as f:
+            os_x_system_profiler = f.read().splitlines()
+    except:
+        os_x_system_profiler_ = sp.check_output('system_profiler 2>/dev/null', shell=True)
+        try:
+            with open('/tmp/system_profiler.%s' % (today), 'w') as f:
+                f.write(os_x_system_profiler_)
+                os_x_system_profiler = os_x_system_profiler_.splitlines()
+        except:
+            pass
 
 
 def wrap(word, string):
@@ -181,15 +200,36 @@ def sysinfo_cpuinfo():
             speed = speed_output[0].split('\t\t: ')[1]
             return_value['freq'] = float(speed)
             return_value['count'] = multiplier
-        except CalledProcessError:
+        except sp.CalledProcessError as e:
             # OS X
-            # $ system_profiler 2>&1 | grep -A 3 'Processor Name'
-            pass
+            if os_x_system_profiler is not None:
+                for line in os_x_system_profiler:
+                    if 'Processor Name:' in line:
+                        parts = line.strip().split(' ')[2:]
+                        return_value['vendor'] = parts[0]
+                    if 'Processor Speed:' in line:
+                        parts = line.strip().split(' ')[2:] # example: 1.8 GHz
+                        speed = float(parts[0])
+
+                        if parts[1] == 'GHz':
+                            speed *= 1000
+
+                        return_value['freq'] = speed
         finally:
             return return_value
 
     info = parse_cpu_info()
-    cpu_model = platform.processor()
+    cpu_model = platform.processor() # lies on OS X 64-bit and claims i386
+
+    if sys.platform == 'darwin':
+        info['count'] = int(sp.check_output('sysctl hw.ncpu', shell=True)[9:])
+
+        if os_x_system_profiler is not None:
+            for line in os_x_system_profiler:
+                if 'Processor Name:' in line:
+                    parts = line.strip().split(' ')[2:]
+                    cpu_model = ' '.join(parts)
+
     # Stupid Intel Core i7 CPU shows the speed at the end
     # 'Intel(R) Core(TM) i7-2677M CPU @ 1.80GHz'
     cpu_model = re.sub('\sCPU\s@\s\d\.\d+GHz$', '', cpu_model)
@@ -965,7 +1005,7 @@ def btinfo(word, word_eol, userdata):
 # xchat.hook_command('npaction', npaction)
 #xchat.hook_command('sysinfo', sysinfo)
 xchat.hook_command('xsys', xsys)
-#xchat.hook_command('cpuinfo', cpuinfo)
+xchat.hook_command('cpuinfo', cpuinfo)
 #xchat.hook_command('sysuptime', uptime)
 xchat.hook_command('osinfo', osinfo)
 #xchat.hook_command('sound', sound)
