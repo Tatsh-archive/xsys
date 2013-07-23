@@ -259,11 +259,14 @@ def sysinfo_meminfo():
         result = {}
 
         pages_free_bytes = int(re.split(':\s+', lines[1])[1].replace('.', '')) * page_size_bytes
+        cached_pages_free_bytes = int(re.split(':\s+', lines[3])[1].replace('.', '')) * page_size_bytes
+        cached_pages_free_bytes += int(re.split(':\s+', lines[4])[1].replace('.', '')) * page_size_bytes # add pages speculative?
+        total_kb = int(sp.check_output('sysctl hw.memsize', shell=True).split(' ')[1]) / 1024
 
         return [
             pages_free_bytes / 1024,  # free_kb
-            0,  # cached_kb
-            0   # total_kb
+            cached_pages_free_bytes / 1024,  # cached_kb
+            total_kb
         ]
 
 
@@ -1026,7 +1029,7 @@ xchat.hook_command('osinfo', osinfo)
 #xchat.hook_command('netdata', netdata)
 #xchat.hook_command('netstream', netstream)
 xchat.hook_command('diskinfo', diskinfo)
-#xchat.hook_command('meminfo', meminfo)
+xchat.hook_command('meminfo', meminfo)
 #xchat.hook_command('video', video)
 #xchat.hook_command('ether', ether)
 #xchat.hook_command('distro', distro)
