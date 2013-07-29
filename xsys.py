@@ -473,6 +473,39 @@ def ether(word, word_eol, userdata):
 
 # TODO Non-PCI when not using ALSA
 def sysinfo_sound():
+    def sysinfo_sound_osx():
+        data = []
+
+        index = 0
+        entered_section = False
+
+        for line in os_x_system_profiler:
+            if entered_section and re.match('^[A-Z]', line):
+                break
+
+            if line == 'Audio:':
+                entered_section = True
+            elif entered_section and len(line):
+                data.append(line)
+            index += 1
+
+        # card name is 4 spaces in
+        # each specific device is 6 spaces in
+        # data is 8 spaces in
+        # There is also a 'Devices:' line; not sure if the Microphone should be counted
+        # TODO: Count number of subdevices
+        index = 0
+        names = []
+
+        for line in data:
+            if re.match('^\s{4}\w', line) and 'Devices:' not in line:
+                names.append(line.replace(':', '').strip())
+
+        return ', '.join(names)
+
+    if os_x_system_profiler is not None:
+        return sysinfo_sound_osx()
+
     names = []
     alsa_sound_card_list_file = '/proc/asound/cards'
 
@@ -1025,7 +1058,7 @@ xchat.hook_command('xsys', xsys)
 xchat.hook_command('cpuinfo', cpuinfo)
 xchat.hook_command('sysuptime', uptime)
 xchat.hook_command('osinfo', osinfo)
-#xchat.hook_command('sound', sound)
+xchat.hook_command('sound', sound)
 #xchat.hook_command('netdata', netdata)
 #xchat.hook_command('netstream', netstream)
 xchat.hook_command('diskinfo', diskinfo)
